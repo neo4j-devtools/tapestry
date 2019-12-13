@@ -1,0 +1,8 @@
+.idea
+.DS_Store
+.npmrc
+.nvmrc
+jest.config.js
+tsconfig.json
+tslint.json
+src/

@@ -1,0 +1,26 @@
+{
+    "name": "tapestry",
+    "version": "1.0.0",
+    "description": "TBA",
+    "keywords": [],
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "repository": "https://github.com/huboneo/tapestry",
+    "scripts": {
+        "clean": "rimraf dist",
+        "test": "jest",
+        "watch": "tsc -w",
+        "dev": "npm run build && node ./dist/dev.js",
+        "build": "npm run clean && tsc"
+    },
+    "author": "huboneo",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/jest": "24.0.18",
+        "jest": "24.9.0",
+        "rimraf": "3.0.0",
+        "ts-jest": "24.2.0",
+        "typescript": "3.6.3"
+    },
+    "dependencies": {}
+}
