@@ -1,34 +1,7 @@
-# Tapestry
-A neo4j driver spike.
-
-```Typescript
-import {reduce} from 'rxjs/operators';
-
-import {Driver, Dict, List, Monad, NodeMonad, RecordMonad} from '.';
-
-type Header = Dict<Monad<any>>;
-type Data = List<NodeMonad>;
-type Rec = RecordMonad<Data, Header>;
-
-const driver = new Driver<Data, Header, Rec>({});
-
-driver.runQuery('MATCH (n) RETURN n')
-    .pipe(reduce((agg, next) => agg.concat(next), List.of<Rec>([])))
-    .subscribe((res) => {
-        console.log('result', res);
-    });
-```
-
-## Configuration
-```Typescript
-import {
-    List,
-    Monad,
-    RecordMonad,
-    Packer,
-    Unpacker,
-    DRIVER_HEADERS
-} from '.';
+import {List, Monad, RecordMonad} from '../monads';
+import {Packer} from './packstream/packer/packer';
+import {Unpacker} from './packstream/unpacker/unpacker';
+import {DRIVER_HEADERS} from './driver/driver.constants';
 
 export interface IAuth {
     scheme: 'basic',
@@ -56,4 +29,3 @@ export interface IDriverConfig<Data = Monad<any>,
     mapToRecordHeader: (headerRecord: Data) => Header;
     mapToRecord: (headerRecord: Header, data: Data) => Rec;
 }
-```

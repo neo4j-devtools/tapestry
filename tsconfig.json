@@ -3,7 +3,7 @@
         "module": "commonjs",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
-        "target": "es6",
+        "target": "es5",
         "strict": true,
         "sourceMap": true,
         "noImplicitAny": true,
@@ -13,7 +13,8 @@
         "experimentalDecorators": true,
         "skipLibCheck": true,
         "declaration": true,
-        "outDir": "dist"
+        "outDir": "dist",
+        "downlevelIteration": true
     },
     "include": [
         "src/**/*",

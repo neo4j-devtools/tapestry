@@ -1,55 +1,84 @@
 export interface IMonad<T> extends Iterable<T> {
     equals(other: IMonad<any>): boolean;
-    get(): T;
-    // @todo: fix typings of return
-    getOrElse<R extends any>(other: R): T | R;
+
+    get(): T | undefined;
+
+    getOrElse(other: T): T;
+
     isEmpty(): boolean;
+
     toString(formatter?: (val: T) => string): string
-    map<R>(project: (value: T) => R): IMonad<R>;
-    flatMap<R, M extends IMonad<R>>(project: (value: T) => M): M;
+
+    map(project: (value: T) => T): IMonad<T>;
+
+    flatMap<M extends IMonad<any> = Monad<any>>(project: (value: T) => M): M;
 }
 
-export default class Monad<T> implements IMonad<T> {
-    constructor(protected value: T) {}
+export default class Monad<T extends any> implements IMonad<T> {
+    protected alreadyIterable = false;
+    protected iterableValue: Iterable<T> = [];
 
-    *[Symbol.iterator](): Iterator<T> {
-        yield this.value;
+    constructor(protected readonly original: T) {
+        // @ts-ignore
+        this.alreadyIterable = original != null && typeof original[Symbol.iterator] === 'function';
+        // @ts-ignore
+        this.iterableValue = this.alreadyIterable
+            ? original
+            : [original];
+    }
+
+    static isMonad<T extends any>(val: any): val is Monad<T> {
+        return val instanceof Monad;
+    }
+
+    static of(val: any) {
+        return new Monad(val);
+    }
+
+    static from(val: any) {
+        return val instanceof Monad
+            ? val
+            : Monad.of(val);
+    }
+
+    * [Symbol.iterator](): Iterator<T> {
+        for (const val of this.iterableValue) {
+            yield val;
+        }
     }
 
     isEmpty() {
-        return true;
+        return this.original == null;
     }
 
     get() {
-        return this.value
+        return this.original;
     }
 
-    getOrElse<R>(other: R) {
+    getOrElse(other: T): T {
         return this.isEmpty()
             ? other
-            : this.value;
+            : this.get();
     }
 
     equals(other: IMonad<any>) {
-        if (other.constructor !== this.constructor) return false;
+        if (other.constructor !== this.constructor) {
+            return false;
+        }
 
-        return other.map((val) => val === this.value).get();
+        return other.map((val) => val === this.original).getOrElse(false);
     }
 
-    // @todo: fix typings of return
-    map<R>(project: (value: T) => R) {
-        return new Monad<R>(project(this.value));
+    map(project: (value: T) => T): this {
+        // @ts-ignore
+        return new this.constructor(project(this.original));
     }
 
-    flatMap<R, M extends IMonad<R>>(project: (value: T) => M) {
-        return project(this.value);
+    flatMap<M extends IMonad<any> = Monad<any>>(project: (value: T) => M): M {
+        return project(this.original);
     }
 
-    toString(formatter?: (val: T) => string) {
-        const value = formatter
-            ? formatter(this.value)
-            : this.value;
-
-        return `${value}`;
+    toString() {
+        return `${this.constructor.name} {${this.original}}`;
     }
 }
