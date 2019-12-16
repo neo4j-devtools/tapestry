@@ -1,0 +1,7 @@
+export const DEFAULT_MAX_CONCURRENT_CONNECTIONS = 10;
+export const DEFAULT_RESULT_CHUNK_SIZE = 100;
+
+export enum QUERY_MODES {
+    READ_MODE = 'READ',
+    WRITE_MODE = 'WRITE',
+}
