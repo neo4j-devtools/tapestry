@@ -1,6 +1,10 @@
 import Monad from './monad';
 
-export default class BooleanMonad extends Monad<boolean> {
+export default class Bool extends Monad<boolean> {
+    static of(val: any) {
+        return new Bool(Boolean(val))
+    }
+
     constructor(value = false) {
         super(value);
     }

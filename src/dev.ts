@@ -1,7 +1,11 @@
-import {BooleanMonad, NumberMonad, StringMonad} from './monads/index';
+import {Bool, Num, Str} from './monads/index';
 
-const bool = new BooleanMonad;
-const num = new NumberMonad;
-const str = new StringMonad;
+const bool = new Bool;
+const num = new Num;
+const str = new Str;
 
-console.log(bool, num, str);
+const foo = new Bool()
+    .map((v) => !v)
+    .flatMap(Str.of);
+
+console.log(bool, num, str, foo);
