@@ -1,11 +1,11 @@
-import {QUERY_MODES} from '../driver/driver.constants';
+import {ACCESS_MODES} from '../driver/driver.constants';
 
 export type ConnectionConfig = {};
 
 export type SaneQuery = {
     queryId: string,
     dbName: string,
-    mode: QUERY_MODES,
+    mode: ACCESS_MODES,
     query: string,
     parameters: {[key: string]: any},
     resultChunkSize: 100

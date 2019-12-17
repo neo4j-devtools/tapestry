@@ -1,4 +1,4 @@
-import {QUERY_MODES} from './driver.constants';
+import {ACCESS_MODES} from './driver.constants';
 
 export type AuthOptions = {
     username: string;
@@ -23,7 +23,7 @@ export type DriverConfig = {
 
 export type QueryOptions = {
     dbName: string,
-    mode?: QUERY_MODES,
+    mode?: ACCESS_MODES,
     query: string,
     parameters?: {[key: string]: any},
     resultChunkSize?: 100

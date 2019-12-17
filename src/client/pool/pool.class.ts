@@ -1,4 +1,4 @@
-import {of, Subject} from 'rxjs';
+import {Subject} from 'rxjs';
 import {flatMap, map, skipWhile, take, tap, withLatestFrom} from 'rxjs/operators';
 import {filter as _filter, head as _head} from 'lodash-es';
 import uuid from 'uuid/v4';
@@ -33,50 +33,60 @@ export default class Pool {
             withLatestFrom(this.activeConnections),
             flatMap(([availableConnections, activeConnections]) => {
                 if (!(arrayHasItems(availableConnections) && arrayAtOrAbove(activeConnections, this.driver.driverConfig.maxConcurrentConnections))) {
-                    const newConnection = new Connection(this);
-
-                    this.activeConnections.next([
-                        ...activeConnections,
-                        newConnection
-                    ]);
-
-                    return of(newConnection);
+                    return this.createNewConnection();
                 }
 
-                return this.enqueue(query);
+                this.addToRequestQueue(query);
+
+                return this.availableConnections.pipe(
+                    skipWhile((availableConnections) => {
+                        const nextQuery = _head(this.requestQueue);
+
+                        return !(nextQuery && nextQuery.queryId === query.queryId && arrayHasItems(availableConnections));
+                    }),
+                    map((availableConnections) => _head(availableConnections)!),
+                    tap(() => this.removeFromRequestQueue(query)),
+                    take(1)
+                );
             }),
         )
     }
 
-    enqueue(query: SaneQuery) {
+    addToRequestQueue(query: SaneQuery) {
         this.requestQueue = [
             ...this.requestQueue,
             query
         ];
+    }
 
-        return this.availableConnections.pipe(
-            skipWhile((availableConnections) => {
-                const nextQuery = _head(this.requestQueue);
+    removeFromRequestQueue(query: SaneQuery) {
+        this.requestQueue = _filter(this.requestQueue, ({queryId}) => queryId !== query.queryId);
+    }
 
-                return !(nextQuery && nextQuery.queryId === query.queryId && arrayHasItems(availableConnections));
-            }),
-            map((availableConnections) => _head(availableConnections)!),
-            tap(() => {
-                this.requestQueue = _filter(this.requestQueue, ({queryId}) => queryId !== query.queryId);
-            }),
-            take(1)
+    createNewConnection() {
+        return this.activeConnections.pipe(
+            take(1),
+            map((activeConnections) => {
+                const newConnection = new Connection(this);
+
+                this.activeConnections.next([
+                    ...activeConnections,
+                    newConnection
+                ]);
+
+                return newConnection
+            })
         );
     }
 
-    dequeue(_: SaneQuery, connection: Connection) {
-        return this.availableConnections.pipe(
+    destroyConnection(connection: Connection) {
+        return this.activeConnections.pipe(
             take(1),
-            tap((availableConnections) => {
-                this.availableConnections.next([
-                    ...availableConnections,
-                    connection
-                ])
+            map((activeConnections) => {
+                this.activeConnections.next(_filter(activeConnections, ({connectionId}) => connectionId !== connection.connectionId));
+
+                return connection
             })
-        )
+        );
     }
 }
