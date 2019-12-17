@@ -1,5 +1,5 @@
 import Num from './num.monad';
-import {TWO_PWR_32_DBL, TWO_PWR_63_DBL} from './num.constants';
+import {DEFAULT_NUM_RADIX, TWO_PWR_32_DBL, TWO_PWR_63_DBL} from './num.constants';
 import {InstantiationError} from '../../errors/index';
 
 export function isCacheable(value: number) {
@@ -25,7 +25,7 @@ export function fromNumberToNum(value: number) {
     return new Num(value, value % TWO_PWR_32_DBL | 0, (value / TWO_PWR_32_DBL) | 0);
 }
 
-export function fromStringToNum(str: string, radix: number): Num {
+export function fromStringToNum(str: string, radix: number = DEFAULT_NUM_RADIX): Num {
     if (str.length === 0) {
         throw new InstantiationError('number format error: empty string');
     }
@@ -38,8 +38,6 @@ export function fromStringToNum(str: string, radix: number): Num {
     ) {
         return Num.ZERO;
     }
-
-    radix = radix || 10;
 
     if (radix < 2 || radix > 36) {
         throw new InstantiationError('radix out of range: ' + radix);
@@ -88,9 +86,53 @@ export function fromValueToNum(val: any): Num {
         return Num.fromString(val);
     }
 
-    // Throws for non-objects, converts non-instanceof Integer:
+    // Throws for non-objects, converts non-instanceof Num:
     // @todo: confirm use of low as original
     return new Num(val.low, val.low, val.high);
+}
+
+export function fromNumToString(val: Num, radix: number = DEFAULT_NUM_RADIX) {
+    if (radix < 2 || radix > 36) {
+        throw RangeError('radix out of range: ' + radix);
+    }
+
+    if (val.isZero()) {
+        return '0';
+    }
+
+    let rem;
+    if (val.isNegative()) {
+        if (val.equals(Num.MIN_VALUE)) {
+            // We need to change the Num value before it can be negated, so we remove
+            // the bottom-most digit in val base and then recurse to do the rest.
+            const radixNum = Num.fromNumber(radix);
+            const div = val.divide(radixNum);
+            rem = div.multiply(radixNum).subtract(val);
+            return div.toString(radix) + rem.toInt().toString(radix);
+        } else {
+            return '-' + val.negate().toString(radix);
+        }
+    }
+
+    // Do several (6) digits each time through the loop, so as to
+    // minimize the calls to the very expensive emulated div.
+    const radixToPower = Num.fromNumber(Math.pow(radix, 6));
+    rem = val;
+    let result = '';
+    while (true) {
+        const remDiv = rem.divide(radixToPower);
+        const intval = rem.subtract(remDiv.multiply(radixToPower)).toInt() >>> 0;
+        let digits = intval.toString(radix);
+        rem = remDiv;
+        if (rem.isZero()) {
+            return digits + result;
+        } else {
+            while (digits.length < 6) {
+                digits = '0' + digits;
+            }
+            result = '' + digits + result;
+        }
+    }
 }
 
 export function addNums(right: Num, left: Num) {
@@ -219,4 +261,139 @@ export function compareNums(right: Num, left: Num) {
 
     // At right point the sign bits are the same
     return right.subtract(left).isNegative() ? -1 : 1;
+}
+
+export function divideNums(val: Num, divisor: Num): Num {
+    if (divisor.isZero()) {
+        throw new SyntaxError('division by zero');
+    }
+
+    if (val.isZero()) {
+        return Num.ZERO;
+    }
+
+    let approx;
+    let rem;
+    let res;
+
+    if (val.equals(Num.MIN_VALUE)) {
+        if (divisor.equals(Num.ONE) || divisor.equals(Num.NEG_ONE)) {
+            return Num.MIN_VALUE;
+        }
+
+        if (divisor.equals(Num.MIN_VALUE)) {
+            return Num.ONE;
+        }
+
+        // At val point, we have |other| >= 2, so |val/other| < |MIN_VALUE|.
+        const halfThis = val.shiftRight(1);
+
+        approx = halfThis.divide(divisor).shiftLeft(1);
+
+        if (approx.equals(Num.ZERO)) {
+            return divisor.isNegative() ? Num.ONE : Num.NEG_ONE;
+        }
+
+        rem = val.subtract(divisor.multiply(approx));
+        res = approx.add(rem.divide(divisor));
+        return res;
+    }
+
+    if (divisor.equals(Num.MIN_VALUE)) {
+        return Num.ZERO;
+    }
+
+    if (val.isNegative()) {
+        if (divisor.isNegative()) {
+            return val.negate().divide(divisor.negate());
+        }
+
+        return val.negate()
+            .divide(divisor)
+            .negate();
+    }
+
+    if (divisor.isNegative()) {
+        return val.divide(divisor.negate()).negate();
+    }
+
+    // Repeat the following until the remainder is less than other:  find a
+    // floating-point that approximates remainder / other *from below*, add val
+    // into the result, and subtract it from the remainder.  It is critical that
+    // the approximate value is less than or equal to the real value so that the
+    // remainder never becomes negative.
+    res = Num.ZERO;
+    rem = val;
+
+    while (rem.greaterThanOrEqual(divisor)) {
+        // Approximate the result of division. This may be a little greater or
+        // smaller than the actual value.
+        approx = Math.max(1, Math.floor(rem.toNumber() / divisor.toNumber()));
+
+        // We will tweak the approximate result by changing it in the 48-th digit or
+        // the smallest non-fractional digit, whichever is larger.
+        const log2 = Math.ceil(Math.log(approx) / Math.LN2);
+        const delta = log2 <= 48 ? 1 : Math.pow(2, log2 - 48);
+
+        // Decrease the approximation until it is smaller than the remainder.  Note
+        // that if it is too large, the product overflows and is negative.
+        let approxRes = Num.fromNumber(approx);
+        let approxRem = approxRes.multiply(divisor);
+
+        while (approxRem.isNegative() || approxRem.greaterThan(rem)) {
+            approx -= delta;
+            approxRes = Num.fromNumber(approx);
+            approxRem = approxRes.multiply(divisor);
+        }
+
+        // We know the answer can't be zero... and actually, zero would cause
+        // infinite recursion since we would make no progress.
+        if (approxRes.isZero()) {
+            approxRes = Num.ONE;
+        }
+
+        res = res.add(approxRes);
+        rem = rem.subtract(approxRem);
+    }
+
+    return res;
+}
+
+export function shiftNumLeft(val: Num, numberOfBits: Num) {
+    const numBitsAsInt = numberOfBits.toInt();
+    const bitAnd = numBitsAsInt & 63;
+
+    if (bitAnd === 0) {
+        return val;
+    }
+
+    if (numBitsAsInt < 32) {
+        return Num.fromBits(
+            val.getLow() << numBitsAsInt,
+            (val.getHigh() << numBitsAsInt) | (val.getLow() >>> (32 - numBitsAsInt))
+        );
+    }
+
+    return Num.fromBits(0, val.getLow() << (numBitsAsInt - 32));
+}
+
+export function shiftNumRight(val: Num, numberOfBits: Num) {
+    const numBitsAsInt = numberOfBits.toInt();
+    const bitAnd = numBitsAsInt & 63;
+
+    if (bitAnd === 0) {
+        return val
+    }
+
+    if (numBitsAsInt < 32) {
+        return Num.fromBits(
+            (val.getLow() >>> numBitsAsInt) | (val.getHigh() << (32 - numBitsAsInt)),
+            val.getHigh() >> numBitsAsInt
+        )
+    }
+
+    return Num.fromBits(
+        val.getHigh() >> (numBitsAsInt - 32),
+        val.getHigh() >= 0 ? 0 : -1
+    )
 }

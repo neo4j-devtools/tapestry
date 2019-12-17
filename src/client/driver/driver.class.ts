@@ -7,6 +7,7 @@ import {SaneQuery} from '../connection/connection.types';
 
 import {DEFAULT_RESULT_CHUNK_SIZE, ACCESS_MODES, DEFAULT_MAX_CONCURRENT_CONNECTIONS} from './driver.constants';
 import Pool from '../pool/pool.class';
+import RequestMessage from '../request-message/request-message.class';
 
 type Response = {}
 
@@ -45,12 +46,12 @@ export default class Driver {
         )
     }
 
-    private createConnectionMessage(query: SaneQuery): Buffer {
+    private createConnectionMessage(query: SaneQuery): RequestMessage {
 
     }
 
     @autobind
-    private decodeConnectionMessage(message: Buffer): Response {
+    private decodeConnectionMessage(message: RequestMessage): Response {
 
     }
 }

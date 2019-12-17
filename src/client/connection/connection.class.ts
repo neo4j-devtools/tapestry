@@ -1,23 +1,27 @@
-import {Observable, Subscriber} from 'rxjs';
+import {Observable, Subject} from 'rxjs';
+import {flatMap, map} from 'rxjs/operators';
 import uuid from 'uuid/v4';
 import net from 'net';
 import autobind from 'autobind-decorator';
 
-import {ConnectionConfig} from './connection.types'; // @todo: socket typing
+import {ConnectionConfig} from './connection.types';
 
 import Pool from '../pool/pool.class';
 import RequestMessage from '../request-message/request-message.class';
+import {createHandshakeBuffer} from '../protocol/protocol.utils';
+import Protocol from '../protocol/protocol.class';
 
-export default class Connection extends Observable<Buffer> {
+export default class Connection extends Subject<RequestMessage> {
     public readonly connectionId = uuid();
     public readonly connectionConfig: ConnectionConfig;
     private readonly connectionSocket: net.Socket;
+    private readonly connectionProtocol = new Protocol();
 
-    static makeConfig(pool: Pool) {
+    static makeConfig() {
         return {};
     }
 
-    static makeSocket(pool: Pool) {
+    static makeSocket() {
         const socket = net.connect(
             7697,
             '127.0.0.1',
@@ -33,35 +37,60 @@ export default class Connection extends Observable<Buffer> {
 
     constructor(private readonly pool: Pool) {
         super();
-        this.connectionConfig = Connection.makeConfig(pool);
-        this.connectionSocket = Connection.makeSocket(pool);
-        this._subscribe = this.connectionObserver; // (ಥ﹏ಥ)
+
+        this.connectionConfig = Connection.makeConfig();
+        this.connectionSocket = Connection.makeSocket();
+
+        this.negotiateProtocol();
     }
 
+    private negotiateProtocol() {
+        this.connectionSocket.write(createHandshakeBuffer());
 
+        const protocolSetter = (data: Buffer) => {
+            this.connectionProtocol.determineProtocolFromMessage(data);
+            // this.connectionProtocol.complete(); // @todo: not sure?
+            this.applyConnectionObservers();
+            this.connectionSocket.off('data', protocolSetter);
+        };
+
+        this.connectionSocket.on('data', protocolSetter);
+    }
 
     sendMessage(message: RequestMessage) {
-        this.connectionSocket.write(message);
+        return this.connectionProtocol.pipe(
+            flatMap((connectionProtocol) => {
+                this.connectionSocket.write(connectionProtocol.toBuffer(message));
 
-        return this;
+                return this;
+            })
+        );
     }
 
-    private healthCheck() {
-        if (this.connectionSocket.readable && this.connectionSocket.writable) return true;
+    receiveMessage(message: Buffer): Observable<RequestMessage> {
+        return this.connectionProtocol.pipe(
+            map((connectionProtocol) => connectionProtocol.fromBuffer(message))
+        );
+    }
 
-        // @todo: logging, race conditions, all that jazz
-        this.connectionSocket.end(() => {
-            this.pool.destroyConnection(this);
-        });
-
-        return false;
+    private destroy() {
+        this.pool.destroyConnection(this);
     }
 
     @autobind
-    private connectionObserver(subscriber: Subscriber<any>) {
-        this.connectionSocket.on('data', subscriber.next);
-        this.connectionSocket.on('error', subscriber.error);
-        this.connectionSocket.on('end', subscriber.complete);
+    private applyConnectionObservers() {
+        // @todo: on("connect")?
+        this.connectionSocket.on('data', (message) => {
+            this.receiveMessage(message).subscribe((message) => this.next(message));
+        });
+        this.connectionSocket.on('error', (error) => {
+            this.error(error);
+            this.destroy();
+        });
+        this.connectionSocket.on('end', () => {
+            this.complete();
+            this.destroy();
+        });
     }
 }
 

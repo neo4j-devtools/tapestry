@@ -1,6 +1,16 @@
 import Monad from '../monad';
-import {TWO_PWR_24_DBL, TWO_PWR_32_DBL} from './num.constants';
-import {addNums, compareNums, fromNumberToNum, fromStringToNum, fromValueToNum, isCacheable, multiplyNum} from './num.utils';
+import {TWO_PWR_24_DBL, TWO_PWR_32_DBL, DEFAULT_NUM_RADIX} from './num.constants';
+import {
+    addNums,
+    compareNums,
+    divideNums,
+    fromNumberToNum,
+    fromNumToString,
+    fromStringToNum,
+    fromValueToNum,
+    isCacheable,
+    multiplyNum, shiftNumLeft, shiftNumRight
+} from './num.utils';
 
 export default class Num extends Monad<number> {
     static readonly INT_CACHE = new Map();
@@ -20,6 +30,12 @@ export default class Num extends Monad<number> {
 
     static of(val: any): Num {
         return new Num(Number(val));
+    }
+
+    static from(val: any) {
+        return val instanceof Num
+            ? val
+            : new Num(val)
     }
 
     static fromInt(val: number): Num {
@@ -43,7 +59,7 @@ export default class Num extends Monad<number> {
         return new Num(lowBits, lowBits, highBits);
     }
 
-    static fromString(str: string, radix = 10): Num {
+    static fromString(str: string, radix: number = DEFAULT_NUM_RADIX): Num {
         return fromStringToNum(str, radix);
     }
 
@@ -53,6 +69,14 @@ export default class Num extends Monad<number> {
 
     toNumber(): number {
         return this.high * TWO_PWR_32_DBL + (this.low >>> 0);
+    }
+
+    toString(radix: number = DEFAULT_NUM_RADIX): string {
+        return fromNumToString(this, radix);
+    }
+
+    toInt(): number {
+        return this.getLow()
     }
 
     constructor(value: number = 0, private readonly low = value, private readonly high = value < 0 ? -1 : 0) {
@@ -151,11 +175,35 @@ export default class Num extends Monad<number> {
         return multiplyNum(this, multiplierToUse);
     }
 
+    divide(divisor: number | string | Num): Num {
+        const divisorToUse = Num.isNum(divisor)
+            ? divisor
+            : Num.fromValue(divisor);
+
+        return divideNums(this, divisorToUse);
+    }
+
     compare(other: number | string | Num): 0 | -1 | 1 {
         const otherToUse = Num.isNum(other)
             ? other
             : Num.fromValue(other);
 
         return compareNums(this, otherToUse);
+    }
+
+    shiftLeft(numBits: number | string | Num): Num {
+        const numBitsToUse = Num.isNum(numBits)
+            ? numBits
+            : Num.fromValue(numBits);
+
+        return shiftNumLeft(this, numBitsToUse);
+    }
+
+    shiftRight(numBits: number | string | Num): Num {
+        const numBitsToUse = Num.isNum(numBits)
+            ? numBits
+            : Num.fromValue(numBits);
+
+        return shiftNumRight(this, numBitsToUse);
     }
 }

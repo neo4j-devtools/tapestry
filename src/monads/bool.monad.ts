@@ -5,6 +5,12 @@ export default class Bool extends Monad<boolean> {
         return new Bool(Boolean(val))
     }
 
+    static from(val: any) {
+        return val instanceof Bool
+            ? val
+            : new Bool(val)
+    }
+
     constructor(value = false) {
         super(value);
     }

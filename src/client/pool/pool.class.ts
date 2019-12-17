@@ -1,4 +1,4 @@
-import {Subject} from 'rxjs';
+import {BehaviorSubject} from 'rxjs';
 import {flatMap, map, skipWhile, take, tap, withLatestFrom} from 'rxjs/operators';
 import {filter as _filter, head as _head} from 'lodash-es';
 import uuid from 'uuid/v4';
@@ -12,8 +12,9 @@ import {arrayHasItems, arrayAtOrAbove} from '../../utils/array.utils';
 export default class Pool {
     public readonly poolId = uuid();
     public readonly poolConfig: PoolConfig;
-    private readonly activeConnections = new Subject<Connection[]>();
-    private readonly availableConnections = new Subject<Connection[]>();
+    // @todo: BehaviorSubject could be a problem, take(1) interaction?
+    private readonly activeConnections = new BehaviorSubject<Connection[]>([]);
+    private readonly availableConnections = new BehaviorSubject<Connection[]>([]);
     private requestQueue: SaneQuery[] = [];
 
     static makeConfig(driver: Driver): PoolConfig {

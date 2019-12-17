@@ -13,6 +13,12 @@ export default class Monad<T extends any> implements IMonad<T> {
         return new Monad(val)
     }
 
+    static from(val: any) {
+        return val instanceof Monad
+            ? val
+            : new Monad(val)
+    }
+
     protected alreadyIterable = false;
     protected iterableValue: Iterable<T> = [];
 
@@ -32,7 +38,7 @@ export default class Monad<T extends any> implements IMonad<T> {
     }
 
     isEmpty() {
-        return true;
+        return this.original == null;
     }
 
     get() {
@@ -72,11 +78,7 @@ export default class Monad<T extends any> implements IMonad<T> {
         return project(this.original);
     }
 
-    toString(formatter?: (val: T) => string) {
-        const value = formatter
-            ? formatter(this.original)
-            : this.original;
-
-        return `${value}`;
+    toString() {
+        return `${this}`;
     }
 }

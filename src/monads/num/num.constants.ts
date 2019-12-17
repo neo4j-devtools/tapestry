@@ -38,3 +38,4 @@ export const TWO_PWR_64_DBL = TWO_PWR_32_DBL * TWO_PWR_32_DBL;
  */
 export const TWO_PWR_63_DBL = TWO_PWR_64_DBL / 2;
 
+export const DEFAULT_NUM_RADIX = 10;

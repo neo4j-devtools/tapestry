@@ -1,0 +1,2 @@
+export const HTTP_MAGIC_PREAMBLE = 1213486160; // == 0x48545450 == "HTTP"
+export const BOLT_MAGIC_PREAMBLE = 0x6060b017;
