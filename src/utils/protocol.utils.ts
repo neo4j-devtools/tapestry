@@ -1,7 +1,5 @@
-import {NodeBuffer} from '../buffers';
-import {BOLT_MAGIC_PREAMBLE, HTTP_MAGIC_PREAMBLE} from './protocol.constants';
-import BaseBuffer from '../buffers/base.buffer';
-import {UnknownProtocolError, BadRequestError} from '../../errors/index';
+import {NodeBuffer} from '../client/buffers/index';
+import {BOLT_MAGIC_PREAMBLE} from '../client/protocol/protocol.constants';
 
 export function createHandshakeBuffer(): Buffer {
     const handshakeBuffer = NodeBuffer.of(5 * 4);
@@ -20,7 +18,7 @@ export function createHandshakeBuffer(): Buffer {
 
     return handshakeBuffer.getBuffer();
 }
-
+/*
 export function createNegotiatedProtocol(buffer: BaseBuffer<Buffer>) {
     const negotiatedVersion = buffer.readInt32();
 
@@ -57,4 +55,4 @@ export function createNegotiatedProtocol(buffer: BaseBuffer<Buffer>) {
         default:
             throw new UnknownProtocolError('Unknown Bolt protocol version: ' + negotiatedVersion);
     }
-}
+}*/

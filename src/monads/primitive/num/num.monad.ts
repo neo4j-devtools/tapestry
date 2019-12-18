@@ -1,4 +1,4 @@
-import Monad from '../monad';
+import Monad from '../../monad';
 import {TWO_PWR_24_DBL, TWO_PWR_32_DBL, DEFAULT_NUM_RADIX} from './num.constants';
 import {
     addNums,
@@ -10,7 +10,7 @@ import {
     fromValueToNum,
     isCacheable,
     multiplyNum, shiftNumLeft, shiftNumRight
-} from './num.utils';
+} from '../../../utils/num.utils';
 
 export default class Num extends Monad<number> {
     static readonly INT_CACHE = new Map();
@@ -23,9 +23,8 @@ export default class Num extends Monad<number> {
     static readonly MAX_SAFE_VALUE = Num.fromBits(0xffffffff | 0, 0x1fffff | 0);
     static readonly TWO_PWR_24 = Num.fromInt(TWO_PWR_24_DBL);
 
-    static isNum(other: any): other is Num {
-        // @todo: strict constructor check?
-        return other && other instanceof Num ? true : false;
+    static isNum(val: any): val is Num {
+        return val instanceof Num
     }
 
     static of(val: any): Num {
@@ -35,16 +34,16 @@ export default class Num extends Monad<number> {
     static from(val: any) {
         return val instanceof Num
             ? val
-            : new Num(val)
+            : Num.of(val);
     }
 
     static fromInt(val: number): Num {
         if (!isCacheable(val)) {
-            return new Num(val);
+            return Num.of(val);
         }
 
         if (!Num.INT_CACHE.has(val)) {
-            Num.INT_CACHE.set(val, new Num(val));
+            Num.INT_CACHE.set(val, Num.of(val));
         }
 
         return Num.INT_CACHE.get(val);
@@ -76,7 +75,19 @@ export default class Num extends Monad<number> {
     }
 
     toInt(): number {
-        return this.getLow()
+        return this.getLow();
+    }
+
+    toNumberOrInfinity() {
+        if (this.lessThan(Num.MIN_SAFE_VALUE)) {
+            return Number.NEGATIVE_INFINITY;
+        }
+
+        if (this.greaterThan(Num.MAX_SAFE_VALUE)) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        return this.toNumber();
     }
 
     constructor(value: number = 0, private readonly low = value, private readonly high = value < 0 ? -1 : 0) {
@@ -95,7 +106,7 @@ export default class Num extends Monad<number> {
         return (this.getLow() & 1) === 1;
     }
 
-    isEven(): boolean{
+    isEven(): boolean {
         return (this.getLow() & 1) === 0;
     }
 
@@ -105,6 +116,10 @@ export default class Num extends Monad<number> {
 
     isPositive(): boolean {
         return this.getHigh() >= 0;
+    }
+
+    isInteger(): boolean {
+        return Number.isInteger(this.original);
     }
 
     equals(other: any): boolean {
@@ -181,6 +196,14 @@ export default class Num extends Monad<number> {
             : Num.fromValue(divisor);
 
         return divideNums(this, divisorToUse);
+    }
+
+    modulo(divisor: number | string | Num): Num {
+        const divisorToUse = Num.isNum(divisor)
+            ? divisor
+            : Num.fromValue(divisor);
+
+        return this.subtract(this.divide(divisorToUse).multiply(divisorToUse))
     }
 
     compare(other: number | string | Num): 0 | -1 | 1 {

@@ -1,5 +1,5 @@
-import Num from './num/num.monad';
-import Monad from './monad';
+import Num from '../primitive/num/num.monad';
+import Monad from '../monad';
 import Relationship from './relationship.monad';
 
 export interface RawUnboundRelationship {
@@ -9,14 +9,25 @@ export interface RawUnboundRelationship {
 }
 
 export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
+    static isUnboundRelationship(val: any) {
+        return val instanceof UnboundRelationship;
+    }
+
     static of(val: any) {
-        return new UnboundRelationship(val)
+        // @todo: improve typechecks
+        const sane: RawUnboundRelationship = {
+            identity: val.identity,
+            type: val.type,
+            properties: new Map(Object.entries(val.properties || {}))
+        };
+
+        return new UnboundRelationship(sane)
     }
 
     static from(val: any) {
         return val instanceof UnboundRelationship
             ? val
-            : new UnboundRelationship(val)
+            : UnboundRelationship.of(val)
     }
 
     isEmpty(): boolean {
@@ -25,6 +36,18 @@ export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
 
     hasProperties() {
         return this.original.properties.size;
+    }
+
+    getIdentity() {
+        return this.original.identity;
+    }
+
+    getType() {
+        return this.original.type;
+    }
+
+    getProperties() {
+        return this.original.properties;
     }
 
     bind(start: Num, end: Num) {

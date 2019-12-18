@@ -1,9 +1,9 @@
 import node from 'buffer';
 import {StringDecoder as StringDecoderLib} from 'string_decoder';
 
-import {NodeBuffer, CombinedBuffer} from '../buffers/index';
-import BaseBuffer from '../buffers/base.buffer';
-import UnknownBufferError from '../../errors/unknown-buffer.error';
+import {NodeBuffer, CombinedBuffer} from '../../buffers/index';
+import BaseBuffer from '../../buffers/base.buffer';
+import UnknownBufferError from '../../../errors/unknown-buffer.error';
 
 const decoder = new StringDecoderLib('utf8');
 

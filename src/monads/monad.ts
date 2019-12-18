@@ -5,10 +5,14 @@ export interface IMonad<T> extends Iterable<T> {
     isEmpty(): boolean;
     toString(formatter?: (val: T) => string): string
     map(project: (value: T) => T): IMonad<T>;
-    flatMap<R, M extends IMonad<R>>(project: (value: T) => M): M;
+    flatMap<R, M extends Iterable<R>>(project: (value: T) => M): M;
 }
 
 export default class Monad<T extends any> implements IMonad<T> {
+    static isMonad(val: any) {
+        return val instanceof Monad;
+    }
+
     static of(val: any) {
         return new Monad(val)
     }
@@ -16,13 +20,13 @@ export default class Monad<T extends any> implements IMonad<T> {
     static from(val: any) {
         return val instanceof Monad
             ? val
-            : new Monad(val)
+            : Monad.of(val)
     }
 
     protected alreadyIterable = false;
     protected iterableValue: Iterable<T> = [];
 
-    constructor(protected original: T) {
+    constructor(protected readonly original: T) {
         // @ts-ignore
         this.alreadyIterable = original != null && typeof original[Symbol.iterator] === 'function';
         // @ts-ignore
@@ -45,7 +49,7 @@ export default class Monad<T extends any> implements IMonad<T> {
         return this.original
     }
 
-    getOrElse(other: T) {
+    getOrElse(other: T): T {
         return this.isEmpty()
             ? other
             : this.get();
@@ -74,7 +78,7 @@ export default class Monad<T extends any> implements IMonad<T> {
         return new this.constructor(project(this.original));
     }
 
-    flatMap<R, M extends IMonad<R>>(project: (value: T) => M): M {
+    flatMap<R, M extends Iterable<R>>(project: (value: T) => M): M {
         return project(this.original);
     }
 

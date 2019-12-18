@@ -8,7 +8,7 @@ import {ConnectionConfig} from './connection.types';
 
 import Pool from '../pool/pool.class';
 import RequestMessage from '../request-message/request-message.class';
-import {createHandshakeBuffer} from '../protocol/protocol.utils';
+import {createHandshakeBuffer} from '../../utils/protocol.utils';
 import Protocol from '../protocol/protocol.class';
 
 export default class Connection extends Subject<RequestMessage> {

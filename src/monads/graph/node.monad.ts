@@ -1,5 +1,6 @@
-import Monad from './monad';
-import Num from './num/num.monad';
+import Monad from '../monad';
+import Num from '../primitive/num/num.monad';
+import {arrayHasItems} from '../../utils/array.utils';
 
 export interface RawNode {
     identity: Num;
@@ -9,14 +10,26 @@ export interface RawNode {
 }
 
 export default class Node extends Monad<RawNode> {
+    static isNode(val: any) {
+        return val instanceof Node;
+    }
+
     static of(val: any) {
-        return new Node(val)
+        // @todo: improve typechecks
+        // @todo: Monads?
+        const sane: RawNode = {
+            identity: val.identity,
+            labels: val.labels,
+            properties: new Map(Object.entries(val.properties || {}))
+        };
+
+        return new Node(sane)
     }
 
     static from(val: any) {
         return val instanceof Node
             ? val
-            : new Node(val)
+            : Node.of(val)
     }
 
     isEmpty(): boolean {
@@ -25,6 +38,22 @@ export default class Node extends Monad<RawNode> {
 
     hasProperties() {
         return this.original.properties.size
+    }
+
+    hasLabels() {
+        return arrayHasItems(this.original.labels);
+    }
+
+    getIdentity() {
+        return this.original.identity;
+    }
+
+    getLabels() {
+        return this.original.labels;
+    }
+
+    getProperties() {
+        return this.original.properties;
     }
 
     toString() {

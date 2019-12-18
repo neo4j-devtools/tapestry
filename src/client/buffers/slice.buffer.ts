@@ -9,7 +9,7 @@ export default class SliceBuffer extends BaseBuffer {
         super(length)
     }
 
-    getInner() {
+    getBuffer() {
         return this.inner
     }
 

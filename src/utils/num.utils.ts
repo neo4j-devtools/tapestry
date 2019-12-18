@@ -1,6 +1,6 @@
-import Num from './num.monad';
-import {DEFAULT_NUM_RADIX, TWO_PWR_32_DBL, TWO_PWR_63_DBL} from './num.constants';
-import {InstantiationError} from '../../errors/index';
+import Num from '../monads/primitive/num/num.monad';
+import {DEFAULT_NUM_RADIX, TWO_PWR_32_DBL, TWO_PWR_63_DBL} from '../monads/primitive/num/num.constants';
+import {InstantiationError} from '../errors/index';
 
 export function isCacheable(value: number) {
     return value >= -128 && value < 128;

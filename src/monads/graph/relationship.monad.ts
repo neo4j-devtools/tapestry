@@ -1,5 +1,5 @@
-import Num from './num/num.monad';
-import Monad from './monad';
+import Num from '../primitive/num/num.monad';
+import Monad from '../monad';
 
 export interface RawRelationship {
     identity: Num;
@@ -10,14 +10,27 @@ export interface RawRelationship {
 }
 
 export default class Relationship extends Monad<RawRelationship> {
+    static isRelationship(val: any) {
+        return val instanceof Relationship;
+    }
+
     static of(val: any) {
-        return new Relationship(val)
+        // @todo: improve typechecks
+        const sane: RawRelationship = {
+            identity: val.identity,
+            start: val.start,
+            end: val.end,
+            type: val.type,
+            properties: new Map(Object.entries(val.properties || {}))
+        };
+
+        return new Relationship(sane)
     }
 
     static from(val: any) {
         return val instanceof Relationship
             ? val
-            : new Relationship(val)
+            : Relationship.of(val)
     }
 
     isEmpty(): boolean {
@@ -25,7 +38,27 @@ export default class Relationship extends Monad<RawRelationship> {
     }
 
     hasProperties() {
-        return this.original.properties.size;
+        return this.original.properties.size
+    }
+
+    getIdentity() {
+        return this.original.identity;
+    }
+
+    getType() {
+        return this.original.type;
+    }
+
+    getStart() {
+        return this.original.start;
+    }
+
+    getEnd() {
+        return this.original.end;
+    }
+
+    getProperties() {
+        return this.original.properties;
     }
 
     toString() {
