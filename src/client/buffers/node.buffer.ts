@@ -5,6 +5,10 @@ import {isNumber} from '../../utils/number.utils';
 import {isFunction} from '../../utils/functions.utils';
 
 export default class NodeBuffer extends BaseBuffer {
+    static isNodeBuffer(val: any): val is NodeBuffer {
+        return val instanceof NodeBuffer;
+    }
+
     static of(arg: any) {
         if (arg instanceof node.Buffer) {
             return new NodeBuffer(arg);
@@ -18,7 +22,7 @@ export default class NodeBuffer extends BaseBuffer {
     }
 
     constructor(protected readonly buffer: Buffer) {
-        super(buffer.length);
+        super(buffer.length, buffer);
     }
 
     getBuffer() {

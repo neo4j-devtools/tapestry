@@ -2,6 +2,10 @@ import BaseBuffer from './base.buffer';
 import NodeBuffer from './node.buffer';
 
 export default class CombinedBuffer extends BaseBuffer {
+    static isCombinedBuffer(val: any): val is CombinedBuffer {
+        return val instanceof CombinedBuffer;
+    }
+
     protected readonly buffers: BaseBuffer[];
 
     constructor(buffers: BaseBuffer[]) {

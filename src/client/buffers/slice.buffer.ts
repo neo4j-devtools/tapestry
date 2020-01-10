@@ -5,11 +5,15 @@ import BaseBuffer from './base.buffer';
  * @access private
  */
 export default class SliceBuffer extends BaseBuffer {
-    constructor (protected start: number, public length: number, protected inner: BaseBuffer) {
-        super(length)
+    static isSliceBuffer(val: any): val is SliceBuffer {
+        return val instanceof SliceBuffer;
     }
 
-    getBuffer() {
+    constructor (protected start: number, public length: number, protected inner: BaseBuffer) {
+        super(length, inner.getBuffer());
+    }
+
+    getInner() {
         return this.inner
     }
 

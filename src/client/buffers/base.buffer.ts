@@ -3,7 +3,7 @@ import SliceBuffer from './slice.buffer';
 export default abstract class BaseBuffer<T extends Buffer = Buffer> {
     protected position: number = 0;
 
-    constructor(public length: number) {}
+    constructor(public length: number, protected readonly buffer = Buffer.from([])) {}
 
     abstract getUInt8(position: number): number;
 
@@ -179,6 +179,10 @@ export default abstract class BaseBuffer<T extends Buffer = Buffer> {
 
     remaining() {
         return this.length - this.position;
+    }
+
+    getBuffer() {
+        return this.buffer;
     }
 
     getBufferPosition() {

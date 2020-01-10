@@ -13,11 +13,11 @@ export default class StringDecoder {
     }
 
     static decode(buffer: BaseBuffer<any>, length: number) {
-        if (buffer instanceof NodeBuffer) {
+        if (NodeBuffer.isNodeBuffer(buffer)) {
             return decodeNodeBuffer(buffer, length);
         }
 
-        if (buffer instanceof CombinedBuffer) {
+        if (CombinedBuffer.isCombinedBuffer(buffer)) {
             return decodeCombinedBuffer(buffer, length);
         }
 
@@ -39,7 +39,7 @@ function decodeCombinedBuffer(buffer: CombinedBuffer, length: number) {
     return streamDecodeCombinedBuffer(
         buffer,
         length,
-        (buf: Buffer) => decoder.write(buf),
+        (buf: BaseBuffer) => decoder.write(buf.getBuffer()),
         () => decoder.end()
     );
 }
@@ -47,7 +47,7 @@ function decodeCombinedBuffer(buffer: CombinedBuffer, length: number) {
 function streamDecodeCombinedBuffer(
     combinedBuffer: CombinedBuffer,
     length: number,
-    decodeFn: (buf: Buffer) => string,
+    decodeFn: (buf: BaseBuffer) => string,
     endFn: () => void
 ) {
     let remainingBytesToRead = length;
@@ -82,7 +82,7 @@ function streamDecodeCombinedBuffer(
         );
         position = 0;
 
-        return last + decodeFn(lastSlice.get());
+        return last + decodeFn(lastSlice);
     }, '');
 
     return out + endFn();
