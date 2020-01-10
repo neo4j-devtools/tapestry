@@ -1,11 +1,11 @@
 import Monad from '../monad';
-import Node from './node.monad';
+import NodeMonad from './node.monad';
 import Relationship from './relationship.monad';
 
 export type RawPathSegment = {
-    start: Node,
+    start: NodeMonad,
     relationship: Relationship,
-    end: Node
+    end: NodeMonad
 }
 
 export default class PathSegment extends Monad<RawPathSegment> {
@@ -15,9 +15,9 @@ export default class PathSegment extends Monad<RawPathSegment> {
 
     static of(val: any) {
         const sane = {
-            start: Node.from(val.start),
+            start: NodeMonad.from(val.start),
             relationship: Relationship.from(val.relationship),
-            end: Node.from(val.end),
+            end: NodeMonad.from(val.end),
         };
 
         return new PathSegment(sane);

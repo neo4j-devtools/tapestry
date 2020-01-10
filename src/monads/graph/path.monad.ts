@@ -1,13 +1,13 @@
-import {map as _map} from 'lodash-es';
+import {map as _map} from 'lodash';
 
-import Node from './node.monad';
+import NodeMonad from './node.monad';
 import PathSegment from './path-segment.monad';
 import Monad from '../monad';
 import {arrayHasItems} from '../../utils/array.utils';
 
 export type RawPath = {
-    start: Node,
-    end: Node,
+    start: NodeMonad,
+    end: NodeMonad,
     segments: PathSegment[]
 };
 
@@ -18,8 +18,8 @@ export default class Path extends Monad<RawPath> {
 
     static of(val: any) {
         const sane = {
-            start: Node.from(val.start),
-            end: Node.from(val.end),
+            start: NodeMonad.from(val.start),
+            end: NodeMonad.from(val.end),
             segments: _map(val.segments, PathSegment.from),
         };
 

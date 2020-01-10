@@ -9,9 +9,9 @@ export interface RawNode {
     properties: Map<string, any>;
 }
 
-export default class Node extends Monad<RawNode> {
+export default class NodeMonad extends Monad<RawNode> {
     static isNode(val: any) {
-        return val instanceof Node;
+        return val instanceof NodeMonad;
     }
 
     static of(val: any) {
@@ -23,13 +23,13 @@ export default class Node extends Monad<RawNode> {
             properties: new Map(Object.entries(val.properties || {}))
         };
 
-        return new Node(sane)
+        return new NodeMonad(sane)
     }
 
     static from(val: any) {
-        return val instanceof Node
+        return val instanceof NodeMonad
             ? val
-            : Node.of(val)
+            : NodeMonad.of(val)
     }
 
     isEmpty(): boolean {

@@ -5,7 +5,7 @@ export {default as Str} from './primitive/str.monad';
 export {default as None} from './primitive/none.monad';
 
 // graph
-export {default as Node} from './graph/node.monad';
+export {default as NodeMonad} from './graph/node.monad';
 export {default as Relationship} from './graph/relationship.monad';
 export {default as UnboundRelationship} from './graph/unbound-relationship.monad';
 export {default as Path} from './graph/path.monad';
