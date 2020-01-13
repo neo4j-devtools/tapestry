@@ -55,18 +55,6 @@ export default class Monad<T extends any> implements IMonad<T> {
             : this.get();
     }
 
-    first() {
-        const it = this[Symbol.iterator]();
-
-        return it.next().value;
-    }
-
-    last() {
-        const arr = [...this].reverse();
-
-        return arr[0];
-    }
-
     equals(other: IMonad<any>) {
         if (other.constructor !== this.constructor) return false;
 

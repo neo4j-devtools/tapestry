@@ -1,6 +1,5 @@
 import {has, merge} from 'lodash';
 import autobind from 'autobind-decorator';
-import net, {Socket} from 'net';
 
 import {packRequestData} from './packer';
 import {unpackResponseMessage} from './unpacker';
@@ -41,7 +40,7 @@ export default class Connection {
     static VERSION = '1.0.0'; // @todo: dynamic
 
     protected readonly connectionParams: IConnectionParams;
-    protected readonly socket: Socket;
+    protected readonly socket: WebSocket;
     protected protocol: number = -1;
     protected didAuth: boolean = false;
 
@@ -50,16 +49,14 @@ export default class Connection {
 
         this.connectionParams = connectionParams;
 
-        this.socket = net.connect(
-            connectionParams.port,
-            connectionParams.host,
+        this.socket = new WebSocket(
+            `${connectionParams.secure ? 'wss': 'ws'}://${connectionParams.host}:${connectionParams.port}`
         );
-        this.socket.setKeepAlive(true);
-
-        this.socket.on('connect', this.onOpen);
-        this.socket.on('data', this.onMessage);
-        this.socket.on('error', this.onError);
-        this.socket.on('close', this.onClose);
+        this.socket.binaryType = 'arraybuffer';
+        this.socket.onopen = this.onOpen;
+        this.socket.onmessage = this.onMessage;
+        this.socket.onerror = this.onError;
+        this.socket.onclose = this.onClose;
     }
 
     private get didHandshake() {
@@ -72,7 +69,7 @@ export default class Connection {
 
     @autobind
     private onOpen() {
-        this.socket.write(getHandshakeMessage());
+        this.socket.send(getHandshakeMessage());
     }
 
     @autobind
@@ -81,34 +78,32 @@ export default class Connection {
     }
 
     @autobind
-    private onData(data: DataView) {
-        const unpacked = unpackResponseMessage(data);
+    private onData(view: DataView) {
+        const {data} = unpackResponseMessage(view, 2); // @todo: 2 from headers
+        const {data: data2} = unpackResponseMessage(view, 48); // @todo: 2 from headers
 
-        console.log('onData', unpacked);
+        console.log('onData', data, data2);
     }
 
     @autobind
     private onHandshake(data: DataView) {
         this.protocol = data.getInt32(0, false);
 
-        this.socket.write(getAuthMessage(this.protocol, this.connectionParams));
-        this.socket.write(new Uint8Array([0,0]));
+        this.socket.send(getAuthMessage(this.protocol, this.connectionParams));
     }
 
     @autobind
-    private onAuth(data: DataView) {
-        console.log('onAuth', data);
-
+    private onAuth(_: DataView) {
         this.didAuth = true;
 
-        this.socket.write(getTestMessage(this.protocol));
-        this.socket.write(new Uint8Array([0,0]));
+        this.socket.send(getTestMessage(this.protocol));
+        this.socket.send(getRetrieveMessage(this.protocol));
     }
 
     @autobind
-    private onMessage(event: Buffer) {
-        // @todo: expensive op?
-        const data = new DataView(new Uint8Array(event).buffer);
+    private onMessage(event: Event) {
+        // @ts-ignore
+        const data = new DataView(event.data);
 
         if (this.isReady) {
             this.onData(data);
@@ -141,37 +136,70 @@ function getHandshakeMessage() {
     ]);
 }
 
+const INIT = 0x01;
 function getAuthMessage(protocol: number, params: IConnectionParams) {
+    const noFields = 2;
     const data = [
+        0xB0 + noFields,
+        INIT,
         ...packRequestData(params.userAgent),
         ...packRequestData(params.auth)
     ];
+    const chunkSize = data.length;
 
     switch (protocol) {
         default:
             return new Uint8Array([
-                (data.length + 2) >> 8,
-                (data.length + 2) & 0xFF,
-                0xB0 + 2,
-                0x01,
-                ...data
+                chunkSize >> 8,
+                chunkSize & 0xFF,
+                ...data,
+                0,
+                0
             ]);
     }
 }
 
+const RUN = 0x10;
 function getTestMessage(protocol: number) {
+    const noFields = 2;
     const data = [
-        ...packRequestData('RETURN 1')
+        0xB0 + noFields,
+        RUN,
+        ...packRequestData('RETURN [1,2]'),
+        ...packRequestData({})
     ];
+    const chunkSize = data.length;
 
     switch (protocol) {
         default:
             return new Uint8Array([
-                (data.length + 2) >> 8,
-                (data.length + 2) & 0xFF,
-                0xB0 + 1,
-                0x10,
-                ...data
+                chunkSize >> 8,
+                chunkSize & 0xFF,
+                ...data,
+                0,
+                0
+            ]);
+    }
+}
+
+const PULL_ALL = 0x3F;
+// @ts-ignore
+function getRetrieveMessage(protocol: number) {
+    const noFields = 0;
+    const data: number[] = [
+        0xB0 + noFields,
+        PULL_ALL
+    ];
+    const chunkSize = data.length;
+
+    switch (protocol) {
+        default:
+            return new Uint8Array([
+                chunkSize >> 8,
+                chunkSize & 0xFF,
+                ...data,
+                0,
+                0
             ]);
     }
 }
