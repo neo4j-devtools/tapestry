@@ -1,4 +1,4 @@
-import Connection from './client/connection.class';
+import {Connection} from './index';
 
 // @ts-ignore
 const con = new Connection({});

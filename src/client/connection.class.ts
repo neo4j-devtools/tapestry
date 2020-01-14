@@ -1,14 +1,10 @@
-import {has, merge} from 'lodash';
+import {merge} from 'lodash';
 import autobind from 'autobind-decorator';
 
 import {packRequestData} from './packer';
 import {unpackResponseMessage} from './unpacker';
-
-// @todo: cleanup
-if (!has(global, 'WebSocket')) {
-    //@ts-ignore
-    global['WebSocket'] = require('ws');
-}
+import {getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
+import {V1_BOLT_MESSAGES} from './connection.constants';
 
 export interface IAuth {
     scheme: 'basic',
@@ -33,7 +29,7 @@ export const DEFAULT_PARAMS: IConnectionParams = {
     host: 'localhost',
     port: 7687,
     // @ts-ignore
-    userAgent: `js2neo/${'2'}`
+    userAgent: `tapestry/${'1.0.0'}`
 };
 
 export default class Connection {
@@ -154,45 +150,11 @@ export default class Connection {
     }
 }
 
-function getHandshakeMessage() {
-    return new Uint8Array([
-        0x60, 0x60, 0xB0, 0x17,
-        0x00, 0x00, 0x00, 0x02,
-        0x00, 0x00, 0x00, 0x01,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-    ]);
-}
-
-const INIT = 0x01;
-function getAuthMessage(protocol: number, params: IConnectionParams) {
-    const noFields = 2;
-    const data = [
-        0xB0 + noFields,
-        INIT,
-        ...packRequestData(params.userAgent),
-        ...packRequestData(params.auth)
-    ];
-    const chunkSize = data.length;
-
-    switch (protocol) {
-        default:
-            return new Uint8Array([
-                chunkSize >> 8,
-                chunkSize & 0xFF,
-                ...data,
-                0,
-                0
-            ]);
-    }
-}
-
-const RUN = 0x10;
 function getTestMessage(protocol: number) {
     const noFields = 2;
     const data = [
         0xB0 + noFields,
-        RUN,
+        V1_BOLT_MESSAGES.RUN,
         ...packRequestData('MATCH (n) RETURN n LIMIT 1'),
         ...packRequestData({})
     ];
@@ -210,13 +172,12 @@ function getTestMessage(protocol: number) {
     }
 }
 
-const PULL_ALL = 0x3F;
 // @ts-ignore
 function getRetrieveMessage(protocol: number) {
     const noFields = 0;
     const data: number[] = [
         0xB0 + noFields,
-        PULL_ALL
+        V1_BOLT_MESSAGES.PULL_ALL
     ];
     const chunkSize = data.length;
 
@@ -232,13 +193,3 @@ function getRetrieveMessage(protocol: number) {
     }
 }
 
-function joinArrayBuffers(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
-    const byteLength = buf1.byteLength + buf2.byteLength;
-    const out = new ArrayBuffer(byteLength);
-    const outArray = new Uint8Array(out);
-
-    outArray.set(new Uint8Array(buf1), 0);
-    outArray.set(new Uint8Array(buf2), buf1.byteLength);
-
-    return out;
-}
