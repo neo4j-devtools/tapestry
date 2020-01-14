@@ -62,7 +62,7 @@ export default class Num extends Monad<number> {
         return fromStringToNum(str, radix);
     }
 
-    static fromValue(val: any): Num {
+    static fromValue(val: any = 0): Num {
         return fromValueToNum(val);
     }
 
@@ -95,7 +95,7 @@ export default class Num extends Monad<number> {
     }
 
     isEmpty(): boolean {
-        return typeof this.original === 'number' && !isNaN(this.original);
+        return typeof this.original !== 'number' || isNaN(this.original);
     }
 
     isZero(): boolean {

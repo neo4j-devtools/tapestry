@@ -6,18 +6,23 @@ export default class Maybe<T = Monad<any>> extends Monad<T> {
         return val instanceof Maybe;
     }
 
-    static of(val?: Monad<any>) {
+    static of<T = Monad<any>>(val?: T | None): Maybe<T> {
         const sane = val !== undefined
             ? val
             : None.EMPTY;
 
-        return new Maybe(sane);
+        return new Maybe<T>(sane);
     }
 
     static from(val: any) {
         return Maybe.isMaybe(val)
             ? val
             : Maybe.of(val);
+    }
+
+    constructor(val?: T | None) {
+        // @ts-ignore
+        super(val);
     }
 
     isEmpty() {

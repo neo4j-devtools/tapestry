@@ -4,7 +4,6 @@ import Maybe from './maybe.monad';
 export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> {
     // @ts-ignore
     protected iterableValue: Iterable<T>;
-
     protected ourFirst?: Maybe<T>;
     protected ourLast?: Maybe<T>;
 

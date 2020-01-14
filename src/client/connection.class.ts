@@ -43,6 +43,7 @@ export default class Connection {
     protected readonly socket: WebSocket;
     protected protocol: number = -1;
     protected didAuth: boolean = false;
+    protected incomingData = new ArrayBuffer(0);
 
     constructor(params: Partial<IConnectionParams>) {
         const connectionParams = merge({}, DEFAULT_PARAMS, params);
@@ -79,10 +80,37 @@ export default class Connection {
 
     @autobind
     private onData(view: DataView) {
-        const {data} = unpackResponseMessage(view, 2); // @todo: 2 from headers
-        const {data: data2} = unpackResponseMessage(view, 48); // @todo: 2 from headers
+        this.incomingData = joinArrayBuffers(this.incomingData, view.buffer);
 
-        console.log('onData', data, data2);
+        let messageData = new ArrayBuffer(0);
+        let endOfChunk = 2;
+
+        while (this.incomingData.byteLength >= endOfChunk) {
+            const header = new Uint8Array(this.incomingData);
+            const chunkSize = header[0] << 8 | header[1];
+
+            endOfChunk = 2 + chunkSize;
+
+            if (chunkSize) {
+                messageData = joinArrayBuffers(messageData, this.incomingData.slice(2, endOfChunk));
+                this.incomingData = this.incomingData.slice(endOfChunk);
+
+                continue;
+            }
+
+            this.onChunk(new DataView(messageData));
+
+            messageData = new ArrayBuffer(0);
+            this.incomingData = this.incomingData.slice(endOfChunk);
+        }
+    }
+
+    // @todo: better name
+    @autobind
+    private onChunk(view: DataView) {
+        const unpacked = unpackResponseMessage(view);
+
+        console.log('onChunk', unpacked);
     }
 
     @autobind
@@ -165,7 +193,7 @@ function getTestMessage(protocol: number) {
     const data = [
         0xB0 + noFields,
         RUN,
-        ...packRequestData('RETURN [1,2]'),
+        ...packRequestData('MATCH (n) RETURN n LIMIT 1'),
         ...packRequestData({})
     ];
     const chunkSize = data.length;
@@ -202,4 +230,15 @@ function getRetrieveMessage(protocol: number) {
                 0
             ]);
     }
+}
+
+function joinArrayBuffers(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
+    const byteLength = buf1.byteLength + buf2.byteLength;
+    const out = new ArrayBuffer(byteLength);
+    const outArray = new Uint8Array(out);
+
+    outArray.set(new Uint8Array(buf1), 0);
+    outArray.set(new Uint8Array(buf2), buf1.byteLength);
+
+    return out;
 }

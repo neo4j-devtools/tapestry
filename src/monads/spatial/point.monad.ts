@@ -1,13 +1,15 @@
-import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
-import {formatAsFloat} from '../../utils/spatial.utils';
+import Num from '../primitive/num/num.monad';
 import None from '../primitive/none.monad';
+import Maybe from '../primitive/maybe.monad';
+
+import {formatAsFloat} from '../../utils/spatial.utils';
 
 export interface RawPoint {
     srid: Num;
     x: Num;
     y: Num;
-    z: Num | None<number>;
+    z: Maybe<Num>;
 }
 
 export default class Point extends Monad<RawPoint> {
@@ -22,9 +24,11 @@ export default class Point extends Monad<RawPoint> {
             // @todo: this could be a perf issue?
             x: Num.fromValue(val.x),
             y: Num.fromValue(val.y),
-            z: val.z == null
-                ? None.of()
-                : Num.fromValue(val.z),
+            z: Maybe.of(
+                val.z == null
+                    ? None.of()
+                    : Num.fromValue(val.z)
+            ),
         };
 
         return new Point(sane);
@@ -41,7 +45,7 @@ export default class Point extends Monad<RawPoint> {
     }
 
     is2d(): boolean {
-        return None.isNone(this.getZ())
+        return None.isNone(this.getZ());
     }
 
     getSrid() {
@@ -60,15 +64,15 @@ export default class Point extends Monad<RawPoint> {
         return this.original.z;
     }
 
-    toString () {
+    toString() {
         const ourZ = this.getZ();
 
-        return !None.isNone(ourZ)
+        return !ourZ.isEmpty()
             ? `Point{srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
                 this.getX()
-            )}, y=${formatAsFloat(this.getY())}, z=${formatAsFloat(ourZ)}}`
+            )}, y=${formatAsFloat(this.getY())}, z=${formatAsFloat(ourZ.get())}}`
             : `Point{srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
                 this.getX()
-            )}, y=${formatAsFloat(this.getY())}}`
+            )}, y=${formatAsFloat(this.getY())}}`;
     }
 }

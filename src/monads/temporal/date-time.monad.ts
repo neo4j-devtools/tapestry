@@ -1,8 +1,9 @@
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
-import {localDateTimeToString, timeZoneOffsetInSeconds, timeZoneOffsetToIsoString, totalNanoseconds} from '../../utils/temporal.utils';
 import Str from '../primitive/str.monad';
 import None from '../primitive/none.monad';
+import Maybe from '../primitive/maybe.monad';
+import {localDateTimeToString, timeZoneOffsetInSeconds, timeZoneOffsetToIsoString, totalNanoseconds} from '../../utils/temporal.utils';
 
 export interface RawDateTime {
     year: Num;
@@ -12,8 +13,8 @@ export interface RawDateTime {
     minute: Num;
     second: Num;
     nanosecond: Num;
-    timeZoneOffsetSeconds: Num | None<number>;
-    timeZoneId: Str | None<string>;
+    timeZoneOffsetSeconds: Maybe<Num>;
+    timeZoneId: Maybe<Str>;
 }
 
 export default class DateTime extends Monad<RawDateTime> {
@@ -31,12 +32,16 @@ export default class DateTime extends Monad<RawDateTime> {
             minute: Num.fromValue(val.minute),
             second: Num.fromValue(val.second),
             nanosecond: Num.fromValue(val.nanosecond),
-            timeZoneOffsetSeconds: val.timeZoneOffsetSeconds == null
-                ? None.of()
-                : Num.fromValue(val.timeZoneOffsetSeconds),
-            timeZoneId: val.timeZoneId
-                ? Str.from(val.timeZoneId)
-                : None.of(),
+            timeZoneOffsetSeconds: Maybe.of(
+                val.timeZoneOffsetSeconds == null
+                    ? None.EMPTY
+                    : Num.fromValue(val.timeZoneOffsetSeconds)
+            ),
+            timeZoneId: Maybe.of(
+                val.timeZoneId
+                    ? Str.from(val.timeZoneId)
+                    : None.EMPTY
+            ),
         };
 
         return new DateTime(sane);
@@ -113,10 +118,11 @@ export default class DateTime extends Monad<RawDateTime> {
             this.getNanosecond()
         );
         const zoneId = this.getTimeZoneId();
-        const timeZoneOffsetSeconds = this.getTimeZoneOffsetSeconds();
-        const timeZoneStr = Str.isStr(zoneId)
-            ? zoneId.map((zone) => `[${zone}]`).get()
-            : timeZoneOffsetToIsoString(timeZoneOffsetSeconds.getOrElse(0));
+        const timeZoneOffsetSeconds = this.getTimeZoneOffsetSeconds().getOrElse(Num.of(0));
+        const timeZone = zoneId.getOrElse(Str.of(''));
+        const timeZoneStr = !timeZone.isEmpty()
+            ? timeZone.map((zone) => `[${zone}]`).get()
+            : timeZoneOffsetToIsoString(timeZoneOffsetSeconds.get());
 
         return localDateTimeStr + timeZoneStr;
     }
