@@ -6,7 +6,7 @@ import {
     DateTime,
     Duration,
     NodeMonad,
-    // Path,
+    Path,
     Relationship,
     TimeMonad,
     Point,
@@ -19,7 +19,7 @@ import {
     Nil,
     Num,
     Dict,
-    List
+    List, Maybe
 } from '../monads';
 
 export function unpackResponseMessage(view: DataView, pos: number = 0): { finalPos: number, data: List } {
@@ -327,7 +327,7 @@ function hydrateStructure(view: DataView, size: number, pos: number): { finalPos
 function tryGetStructMonad(struct: List): Monad<any> {
     // @todo: could be optimised
     const firstBytes = struct.first().getOrElse(Num.of(0));
-    const rest = struct.slice<Num>(1); // @todo: Num technically not true
+    const rest = struct.slice(1); // @todo: Num technically not true
 
     switch (firstBytes.getOrElse(0)) {
         case 0x44: {
@@ -347,11 +347,10 @@ function tryGetStructMonad(struct: List): Monad<any> {
             return NodeMonad.of(unwindList(rest, ['id', 'labels', 'properties']));
         }
 
-        /* @todo
         case 0x50: {
-            return Path.of(rest);
+            // @ts-ignore
+            return mapListToPath(rest);
         }
-        */
 
         case 0x52: {
             return Relationship.of(unwindList(rest, ['start', 'end', 'type', 'properties']));
@@ -359,7 +358,8 @@ function tryGetStructMonad(struct: List): Monad<any> {
 
         case 0x54: {
             return TimeMonad.of({
-                seconds: rest.first().getOrElse(Num.of(0)).divide(1000000000),
+                // @todo
+                seconds: (<Maybe<Num>> rest.first()).getOrElse(Num.of(0)).divide(1000000000),
                 tz: rest.first().getOrElse(Num.of(0))
             });
         }
@@ -378,7 +378,8 @@ function tryGetStructMonad(struct: List): Monad<any> {
 
         case 0x74: {
             return LocalTime.of({
-                seconds: rest.first().getOrElse(Num.of(0)).divide(1000000000)
+                // @todo
+                seconds: (<Maybe<Num>> rest.first()).getOrElse(Num.of(0)).divide(1000000000)
             });
         }
 
@@ -406,4 +407,23 @@ function unwindList(data: List, keys: string[]) {
     }
 
     return agg;
+}
+
+function mapListToPath(list: List<List<NodeMonad | Relationship | Num>>): Path {
+    let [nodes, relations, sequence] = list;
+    const noSequences = sequence.getLength().getOrElse(0);
+
+    let foo = <List<Num>> sequence;
+    let start = <Maybe<NodeMonad>> nodes.first();
+
+    for (let index = 0; index < noSequences; index += 2) {
+        const relIndex = <Maybe<Num>> foo.getIndex(index);
+        const end = <Maybe<NodeMonad>> foo.getIndex(2 * index + 1).flatMap((val) => None.isNone(val)
+            ? Maybe.of(val)
+            : nodes.getIndex(val)
+        )
+
+    }
+
+    return Path.of({});
 }

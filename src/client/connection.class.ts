@@ -155,7 +155,7 @@ function getTestMessage(protocol: number) {
     const data = [
         0xB0 + noFields,
         V1_BOLT_MESSAGES.RUN,
-        ...packRequestData('MATCH (n) RETURN n LIMIT 1'),
+        ...packRequestData('MATCH p=()-[r:LOVES]->() RETURN p'),
         ...packRequestData({})
     ];
     const chunkSize = data.length;

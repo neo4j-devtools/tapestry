@@ -1,7 +1,7 @@
 import Monad from '../monad';
 import None from './none.monad';
 
-export default class Maybe<T = Monad<any>> extends Monad<T> {
+export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
     static isMaybe(val: any): val is Maybe {
         return val instanceof Maybe;
     }
@@ -23,6 +23,11 @@ export default class Maybe<T = Monad<any>> extends Monad<T> {
     constructor(val?: T | None) {
         // @ts-ignore
         super(val);
+    }
+
+    getOrElse(other: T): T {
+        // @ts-ignore
+        return super.getOrElse(other);
     }
 
     isEmpty() {
