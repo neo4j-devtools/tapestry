@@ -117,11 +117,10 @@ export default class DateTime extends Monad<RawDateTime> {
             this.getSecond(),
             this.getNanosecond()
         );
-        const zoneId = this.getTimeZoneId();
+        const zoneId = this.getTimeZoneId().getOrElse(Str.of(''));
         const timeZoneOffsetSeconds = this.getTimeZoneOffsetSeconds().getOrElse(Num.of(0));
-        const timeZone = zoneId.getOrElse(Str.of(''));
-        const timeZoneStr = !timeZone.isEmpty()
-            ? timeZone.map((zone) => `[${zone}]`).get()
+        const timeZoneStr = !zoneId.isEmpty()
+            ? zoneId.map((zone) => `[${zone}]`).get()
             : timeZoneOffsetToIsoString(timeZoneOffsetSeconds.get());
 
         return localDateTimeStr + timeZoneStr;
