@@ -19,8 +19,10 @@ import {
     Nil,
     Num,
     Dict,
-    List, Maybe
+    List,
+    Maybe
 } from '../monads';
+import PathSegment from '../monads/graph/path-segment.monad';
 
 export function unpackResponseMessage(view: DataView, pos: number = 0): { finalPos: number, data: List } {
     const size = view.getUint8(pos) - 0xB0;
@@ -327,7 +329,7 @@ function hydrateStructure(view: DataView, size: number, pos: number): { finalPos
 function tryGetStructMonad(struct: List): Monad<any> {
     // @todo: could be optimised
     const firstBytes = struct.first().getOrElse(Num.of(0));
-    const rest = struct.slice(1); // @todo: Num technically not true
+    const rest = struct.slice(1);
 
     switch (firstBytes.getOrElse(0)) {
         case 0x44: {
@@ -344,7 +346,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
         }
 
         case 0x4E: {
-            return NodeMonad.of(unwindList(rest, ['id', 'labels', 'properties']));
+            return NodeMonad.of(unwindList(rest, ['identity', 'labels', 'properties']));
         }
 
         case 0x50: {
@@ -359,7 +361,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
         case 0x54: {
             return TimeMonad.of({
                 // @todo
-                seconds: (<Maybe<Num>> rest.first()).getOrElse(Num.of(0)).divide(1000000000),
+                seconds: (<Maybe<Num>>rest.first()).getOrElse(Num.of(0)).divide(1000000000),
                 tz: rest.first().getOrElse(Num.of(0))
             });
         }
@@ -373,13 +375,13 @@ function tryGetStructMonad(struct: List): Monad<any> {
         }
 
         case 0x72: {
-            return UnboundRelationship.of(rest);
+            return UnboundRelationship.of(unwindList(rest, ['identity', 'type', 'properties']));
         }
 
         case 0x74: {
             return LocalTime.of({
                 // @todo
-                seconds: (<Maybe<Num>> rest.first()).getOrElse(Num.of(0)).divide(1000000000)
+                seconds: (<Maybe<Num>>rest.first()).getOrElse(Num.of(0)).divide(1000000000)
             });
         }
 
@@ -409,21 +411,47 @@ function unwindList(data: List, keys: string[]) {
     return agg;
 }
 
-function mapListToPath(list: List<List<NodeMonad | Relationship | Num>>): Path {
-    let [nodes, relations, sequence] = list;
-    const noSequences = sequence.getLength().getOrElse(0);
+type PathParam = [List<NodeMonad>, List<UnboundRelationship>, List<Num>];
 
-    let foo = <List<Num>> sequence;
-    let start = <Maybe<NodeMonad>> nodes.first();
+function mapListToPath(list: List): Path {
+    // @todo: typings and no desctructuring
+    let [nodes, relations, sequence] = <PathParam>[...list];
+    const noSequences = sequence.getLength().getOrElse(0);
+    const segments: PathSegment[] = [];
+    let start: NodeMonad = nodes.first().getOrElse(NodeMonad.EMPTY);
+    let last: NodeMonad = start;
 
     for (let index = 0; index < noSequences; index += 2) {
-        const relIndex = <Maybe<Num>> foo.getIndex(index);
-        const end = <Maybe<NodeMonad>> foo.getIndex(2 * index + 1).flatMap((val) => None.isNone(val)
-            ? Maybe.of(val)
+        const relIndex = sequence.getIndex(index).get();
+        const end = sequence.getIndex(2 * index + 1).flatMap((val) => None.isNone(val)
+            ? Maybe.of(NodeMonad.EMPTY)
             : nodes.getIndex(val)
-        )
+        ).get();
 
+        // @todo: so many questions...
+        if (None.isNone(relIndex) || None.isNone(end)) {
+            continue;
+        }
+
+        // @todo: so many questions...
+        const rel = relIndex.greaterThan(0)
+            ? relations.getIndex(relIndex.subtract(1)).getOrElse(UnboundRelationship.EMPTY)
+            : relations.getIndex(relIndex.add(relations.getLength())).getOrElse(UnboundRelationship.EMPTY);
+
+        segments.push(PathSegment.of({
+            start,
+            relationship: UnboundRelationship.isUnboundRelationship(rel)
+                ? rel.bind(start.getIdentity(), end.getIdentity())
+                : rel,
+            end
+        }));
+
+        last = end;
     }
 
-    return Path.of({});
+    return Path.of({
+        start,
+        segments,
+        end: last
+    });
 }

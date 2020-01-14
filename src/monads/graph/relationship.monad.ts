@@ -1,15 +1,19 @@
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
+import Str from '../primitive/str.monad';
+import Dict from '../primitive/dict.monad';
 
 export interface RawRelationship {
     identity: Num;
     start: Num;
     end: Num;
-    type: string;
-    properties: Map<string, any>;
+    type: Str;
+    properties: Dict;
 }
 
 export default class Relationship extends Monad<RawRelationship> {
+    static EMPTY = Relationship.of({});
+
     static isRelationship(val: any) {
         return val instanceof Relationship;
     }
@@ -17,11 +21,11 @@ export default class Relationship extends Monad<RawRelationship> {
     static of(val: any) {
         // @todo: improve typechecks
         const sane: RawRelationship = {
-            identity: val.identity,
-            start: val.start,
-            end: val.end,
-            type: val.type,
-            properties: new Map(Object.entries(val.properties || {}))
+            identity: Num.fromValue(val.identity),
+            start: Num.fromValue(val.start),
+            end: Num.fromValue(val.end),
+            type: Str.from(val.type),
+            properties: Dict.from(val.properties)
         };
 
         return new Relationship(sane)
@@ -34,11 +38,11 @@ export default class Relationship extends Monad<RawRelationship> {
     }
 
     isEmpty(): boolean {
-        return false; // @todo
+        return this.getIdentity().equals(0);
     }
 
     hasProperties() {
-        return this.original.properties.size
+        return !this.original.properties.isEmpty()
     }
 
     getIdentity() {
@@ -70,7 +74,7 @@ export default class Relationship extends Monad<RawRelationship> {
 
             let first = true;
 
-            for (const [key, val] of value.properties.entries()) {
+            for (const [key, val] of value.properties) {
                 if (!first) {
                     s += ',';
                 }

@@ -6,7 +6,7 @@ export default class Str extends Monad<string> {
     }
 
     static of(val: any) {
-        return new Str(String(val))
+        return new Str(val !== undefined ? String(val) : '')
     }
 
     static from(val: any) {

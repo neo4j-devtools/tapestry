@@ -2,7 +2,7 @@ import Monad from '../monad';
 import None from './none.monad';
 
 export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
-    static isMaybe(val: any): val is Maybe {
+    static isMaybe<T = Monad<any>>(val: any): val is Maybe<T> {
         return val instanceof Maybe;
     }
 
@@ -14,7 +14,7 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
         return new Maybe<T>(sane);
     }
 
-    static from(val: any) {
+    static from<T = Monad<any>>(val: any): Maybe<T> {
         return Maybe.isMaybe(val)
             ? val
             : Maybe.of(val);

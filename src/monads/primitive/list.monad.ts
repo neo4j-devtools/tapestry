@@ -3,6 +3,11 @@ import Maybe from './maybe.monad';
 import Num from './num/num.monad';
 import None from './none.monad';
 
+/*
+type MaybeArrayItem<T> =
+    T extends Array<infer Element> ? Element : T;
+*/
+
 export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> {
     // @ts-ignore
     protected iterableValue: Iterable<T>;
@@ -10,19 +15,19 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
     protected ourLast?: Maybe<T>;
     protected readonly ourLength: Num;
 
-    static isList(val: any): val is List {
+    static isList<T extends Monad<any> = Monad<any>>(val: any): val is List<T> {
         return val instanceof List;
     }
 
-    static of(val: any) {
-        const sane: Monad<any>[] = Array.isArray(val)
+    static of<T extends Monad<any> = Monad<any>>(val: any): List<T> {
+        const sane: T[] = Array.isArray(val)
             ? val
             : Array.of(val);
 
         return new List(sane);
     }
 
-    static from(val: any) {
+    static from<T extends Monad<any> = Monad<any>>(val: any): List<T> {
         return val instanceof List
             ? val
             : List.of(val);

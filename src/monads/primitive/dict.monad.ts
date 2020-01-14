@@ -1,6 +1,7 @@
 import {entries} from 'lodash';
 
 import Monad from '../monad';
+import {arrayHasItems} from '../../utils/array.utils';
 
 export type RawDict<T = Monad<any>> = Map<string, T>
 
@@ -33,7 +34,7 @@ export default class Dict<T = Monad<any>> extends Monad<RawDict<T>> {
     }
 
     isEmpty(): boolean {
-        return false; // @todo
+        return arrayHasItems(this.keys);
     }
 
     hasKey(index: number): boolean {

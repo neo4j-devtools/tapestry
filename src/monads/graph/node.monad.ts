@@ -1,26 +1,30 @@
 import Monad from '../monad';
 import Num from '../primitive/num/num.monad';
 import {arrayHasItems} from '../../utils/array.utils';
+import Str from '../primitive/str.monad';
+import Dict from '../primitive/dict.monad';
+import List from '../primitive/list.monad';
 
 export interface RawNode {
     identity: Num;
-    labels: string[];
+    labels: List<Str>;
     // @todo: typings
-    properties: Map<string, any>;
+    properties: Dict;
 }
 
 export default class NodeMonad extends Monad<RawNode> {
+    static EMPTY = NodeMonad.of({});
+
     static isNode(val: any) {
         return val instanceof NodeMonad;
     }
 
     static of(val: any) {
-        // @todo: improve typechecks
-        // @todo: Monads?
+        // @todo: improve typechecks?
         const sane: RawNode = {
-            identity: val.identity,
-            labels: val.labels,
-            properties: new Map(Object.entries(val.properties || {}))
+            identity: Num.fromValue(val.identity),
+            labels: List.from(val.labels),
+            properties: Dict.from(val.properties)
         };
 
         return new NodeMonad(sane)
@@ -33,11 +37,11 @@ export default class NodeMonad extends Monad<RawNode> {
     }
 
     isEmpty(): boolean {
-        return false; // @todo
+        return this.getIdentity().equals(0);
     }
 
     hasProperties() {
-        return this.original.properties.size
+        return !this.original.properties.isEmpty()
     }
 
     hasLabels() {
@@ -60,15 +64,15 @@ export default class NodeMonad extends Monad<RawNode> {
         const value = this.original;
         let s = '(' + value.identity;
 
-        for (let i = 0; i < value.labels.length; i++) {
-            s += ':' + value.labels[i];
+        for (const label of value.labels) {
+            s += ':' + label;
         }
 
         if (this.hasProperties()) {
             s += ' {';
 
             let first = true;
-            for (const [key, val] of value.properties.entries()) {
+            for (const [key, val] of value.properties) {
                 if (!first) {
                     s += ',';
                 }

@@ -155,7 +155,7 @@ function getTestMessage(protocol: number) {
     const data = [
         0xB0 + noFields,
         V1_BOLT_MESSAGES.RUN,
-        ...packRequestData('MATCH p=()-[r:LOVES]->() RETURN p'),
+        ...packRequestData('MATCH p=()-[r:FOLLOWS]->() RETURN p'),
         ...packRequestData({})
     ];
     const chunkSize = data.length;
@@ -172,7 +172,6 @@ function getTestMessage(protocol: number) {
     }
 }
 
-// @ts-ignore
 function getRetrieveMessage(protocol: number) {
     const noFields = 0;
     const data: number[] = [
