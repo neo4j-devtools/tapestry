@@ -1,7 +1,7 @@
 import {IConnectionParams} from './connection.class';
 
-import {packRequestData} from './packer';
-import {V1_BOLT_MESSAGES} from './connection.constants';
+import {packRequestData} from './packstream';
+import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
 
 export function joinArrayBuffers(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
     const byteLength = buf1.byteLength + buf2.byteLength;
@@ -24,13 +24,13 @@ export function getHandshakeMessage() {
     ]);
 }
 
-export function getAuthMessage(protocol: number, params: IConnectionParams) {
+export function getAuthMessage(protocol: BOLT_PROTOCOLS, params: IConnectionParams) {
     const noFields = 2;
     const data = [
         0xB0 + noFields,
         V1_BOLT_MESSAGES.INIT,
-        ...packRequestData(params.userAgent),
-        ...packRequestData(params.auth)
+        ...packRequestData(protocol, params.userAgent),
+        ...packRequestData(protocol, params.auth)
     ];
     const chunkSize = data.length;
 

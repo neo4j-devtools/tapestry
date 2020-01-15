@@ -1,3 +1,11 @@
+export enum BOLT_PROTOCOLS {
+    UNKNOWN = 0,
+    V1 = 1,
+    V2 = 2,
+    V3 = 3,
+    V4 = 4,
+}
+
 export enum V1_BOLT_MESSAGES {
     INIT = 0x01,
     ACK_FAILURE = 0x0E,

@@ -1,10 +1,10 @@
 import {merge} from 'lodash';
 import autobind from 'autobind-decorator';
 
-import {packRequestData} from './packer';
-import {unpackResponseMessage} from './unpacker';
+import {packRequestData, unpackResponseData} from './packstream';
 import {getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
-import {V1_BOLT_MESSAGES} from './connection.constants';
+import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
+import { BOLT_REQUEST_DATA_TYPE } from './packstream/packer.constants';
 
 export interface IAuth {
     scheme: 'basic',
@@ -18,6 +18,7 @@ export interface IConnectionParams {
     host: string;
     port: number;
     userAgent: string;
+    packer?(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any): number[];
 }
 
 export const DEFAULT_PARAMS: IConnectionParams = {
@@ -37,7 +38,7 @@ export default class Connection {
 
     protected readonly connectionParams: IConnectionParams;
     protected readonly socket: WebSocket;
-    protected protocol: number = -1;
+    protected protocol: BOLT_PROTOCOLS = BOLT_PROTOCOLS.UNKNOWN;
     protected didAuth: boolean = false;
     protected incomingData = new ArrayBuffer(0);
 
@@ -57,7 +58,7 @@ export default class Connection {
     }
 
     private get didHandshake() {
-        return this.protocol !== -1;
+        return this.protocol !== BOLT_PROTOCOLS.UNKNOWN;
     }
 
     private get isReady() {
@@ -104,7 +105,7 @@ export default class Connection {
     // @todo: better name
     @autobind
     private onChunk(view: DataView) {
-        const unpacked = unpackResponseMessage(view);
+        const unpacked = unpackResponseData(view);
 
         console.log('onChunk', unpacked);
     }
@@ -150,13 +151,13 @@ export default class Connection {
     }
 }
 
-function getTestMessage(protocol: number) {
+function getTestMessage(protocol: BOLT_PROTOCOLS) {
     const noFields = 2;
     const data = [
         0xB0 + noFields,
         V1_BOLT_MESSAGES.RUN,
-        ...packRequestData('MATCH p=()-[r:FOLLOWS]->() RETURN p'),
-        ...packRequestData({})
+        ...packRequestData(protocol, 'MATCH p=()-[r:FOLLOWS]->() RETURN p'),
+        ...packRequestData(protocol, {})
     ];
     const chunkSize = data.length;
 
@@ -172,7 +173,7 @@ function getTestMessage(protocol: number) {
     }
 }
 
-function getRetrieveMessage(protocol: number) {
+function getRetrieveMessage(protocol: BOLT_PROTOCOLS) {
     const noFields = 0;
     const data: number[] = [
         0xB0 + noFields,

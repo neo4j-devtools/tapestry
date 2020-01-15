@@ -1,5 +1,8 @@
 import {entries, flatMap, take} from 'lodash';
 
+import {BOLT_PROTOCOLS} from '../connection.constants';
+import {BOLT_REQUEST_DATA_TYPE} from './packer.constants';
+
 export enum HEADER_SIZE_LIMITS {
     TINY_ARRAY = 0x90,
     MEDIUM_ARRAY = 0xD5,
@@ -16,19 +19,47 @@ export const BOOLEAN_TRUE_BYTES = 0xB3;
 export const BOOLEAN_FALSE_BYTES = 0xB2;
 export const NULL_BYTES = 0xC0;
 
-export function packRequestData(data: any): number[] {
+export function packRequestData(protocol: BOLT_PROTOCOLS, data: any, packer = defaultPacker) {
     if (Array.isArray(data)) {
-        const {size, headers} = packHeader(
-            data.length,
-            HEADER_SIZE_LIMITS.TINY_ARRAY,
-            HEADER_SIZE_LIMITS.MEDIUM_ARRAY,
-            HEADER_SIZE_LIMITS.LARGE_ARRAY
-        );
-
-        return [...headers, ...flatMap(take(data, size), packRequestData)];
+        return packer(protocol, BOLT_REQUEST_DATA_TYPE.ARRAY, data);
     }
 
     switch (typeof data) {
+        case BOLT_REQUEST_DATA_TYPE.BOOLEAN: {
+            return packer(protocol, BOLT_REQUEST_DATA_TYPE.BOOLEAN, data);
+        }
+
+        case BOLT_REQUEST_DATA_TYPE.NUMBER: {
+            return packer(protocol, BOLT_REQUEST_DATA_TYPE.NUMBER, data);
+        }
+
+        case BOLT_REQUEST_DATA_TYPE.STRING: {
+            return packer(protocol, BOLT_REQUEST_DATA_TYPE.STRING, data);
+        }
+
+        case BOLT_REQUEST_DATA_TYPE.OBJECT: {
+            return packer(protocol, BOLT_REQUEST_DATA_TYPE.OBJECT, data);
+        }
+
+        default: {
+            return packer(protocol, BOLT_REQUEST_DATA_TYPE.UNKNOWN, data);
+        }
+    }
+}
+
+function defaultPacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any): number[] {
+    switch (dataType) {
+        case BOLT_REQUEST_DATA_TYPE.ARRAY: {
+            const {size, headers} = packHeader(
+                data.length,
+                HEADER_SIZE_LIMITS.TINY_ARRAY,
+                HEADER_SIZE_LIMITS.MEDIUM_ARRAY,
+                HEADER_SIZE_LIMITS.LARGE_ARRAY
+            );
+
+            return [...headers, ...flatMap(take(data, size), (chunk) => packRequestData(protocol, chunk, packRequestData))];
+        }
+
         case 'boolean': {
             return [data ? BOOLEAN_TRUE_BYTES : BOOLEAN_FALSE_BYTES];
         }
@@ -51,7 +82,7 @@ export function packRequestData(data: any): number[] {
 
         case 'object': {
             return data
-                ? packObject(data)
+                ? packObject(protocol, data)
                 : [NULL_BYTES];
         }
 
@@ -139,7 +170,7 @@ function packString(str: string): number[] {
     });
 }
 
-function packObject(val: any): number[] {
+function packObject(protocol: BOLT_PROTOCOLS, val: any): number[] {
     const tmp = entries(val);
     const {size, headers} = packHeader(
         tmp.length,
@@ -151,8 +182,8 @@ function packObject(val: any): number[] {
     return [
         ...headers,
         ...flatMap(take(tmp, size), ([key, value]) => [
-            ...packRequestData(key),
-            ...packRequestData(value),
+            ...packRequestData(protocol, key),
+            ...packRequestData(protocol, value),
         ])
     ];
 }

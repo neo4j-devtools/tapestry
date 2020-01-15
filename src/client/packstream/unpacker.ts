@@ -1,37 +1,38 @@
 import {assign} from 'lodash';
 
 import {
-    Monad,
+    Bool,
     DateMonad,
     DateTime,
-    Duration,
-    NodeMonad,
-    Path,
-    Relationship,
-    TimeMonad,
-    Point,
-    LocalDateTime,
-    UnboundRelationship,
-    LocalTime,
-    None,
-    Bool,
-    Str,
-    Nil,
-    Num,
     Dict,
+    Duration,
     List,
-    Maybe
-} from '../monads';
-import PathSegment from '../monads/graph/path-segment.monad';
+    LocalDateTime,
+    LocalTime,
+    Maybe,
+    Monad,
+    Nil,
+    NodeMonad,
+    None,
+    Num,
+    Path,
+    Point,
+    Relationship,
+    Str,
+    TimeMonad,
+    UnboundRelationship
+} from '../../monads/index';
+import PathSegment from '../../monads/graph/path-segment.monad';
 
-export function unpackResponseMessage(view: DataView, pos: number = 0): { finalPos: number, data: List } {
-    const size = view.getUint8(pos) - 0xB0;
-    const finalPos = pos + 1;
+export type UnpackerReturn<T> = {finalPos: number, data: T};
 
-    return unpackStructure(view, size, finalPos);
+export function unpackResponseData(view: DataView): UnpackerReturn<List> {
+    const size = view.getUint8(0) - 0xB0;
+
+    return unpackStructure(view, size, 1);
 }
 
-function unpackMessage(view: DataView, pos: number = 0): { finalPos: number, data: any } {
+function unpackMessage(view: DataView, pos: number = 0): UnpackerReturn<any> {
     const message = view.getUint8(pos);
     const finalPos = pos + 1;
 
@@ -194,7 +195,7 @@ function readInt64(view: DataView, pos: number): number {
     return parseInt('0x' + high + low, 16);
 }
 
-function unpackString(view: DataView, size: number, pos: number): { finalPos: number, data: Str } {
+function unpackString(view: DataView, size: number, pos: number): UnpackerReturn<Str> {
     const replacementCharacter = '\uFFFD';
     const end = pos + size;
     let currPos = pos;
@@ -267,7 +268,7 @@ function unpackString(view: DataView, size: number, pos: number): { finalPos: nu
     return {finalPos: currPos, data: Str.of(str)};
 }
 
-function unpackList(view: DataView, size: number, pos: number): { finalPos: number, data: List } {
+function unpackList(view: DataView, size: number, pos: number): UnpackerReturn<List> {
     const list = [];
     let sizeLeft = size;
     let currPos = pos;
@@ -284,7 +285,7 @@ function unpackList(view: DataView, size: number, pos: number): { finalPos: numb
     return {finalPos: currPos, data: List.of(list)};
 }
 
-function unpackMap(view: DataView, size: number, pos: number): { finalPos: number, data: Dict } {
+function unpackMap(view: DataView, size: number, pos: number): UnpackerReturn<Dict> {
     const map: any = {};
     let sizeLeft = size;
     let currPos = pos;
@@ -302,7 +303,7 @@ function unpackMap(view: DataView, size: number, pos: number): { finalPos: numbe
     return {finalPos: currPos, data: Dict.fromObject(map)};
 }
 
-function unpackStructure(view: DataView, size: number, pos: number): { finalPos: number, data: List } {
+function unpackStructure(view: DataView, size: number, pos: number): UnpackerReturn<List> {
     const fields: Monad<any>[] = [Num.of(readUint8(view, pos))];
     let sizeLeft = size;
     let currPos = pos + 1;
@@ -320,7 +321,7 @@ function unpackStructure(view: DataView, size: number, pos: number): { finalPos:
     return {finalPos: currPos, data: List.of(fields)};
 }
 
-function hydrateStructure(view: DataView, size: number, pos: number): { finalPos: number, data: Monad<any> } {
+function hydrateStructure(view: DataView, size: number, pos: number): UnpackerReturn<Monad<any>> {
     const {finalPos, data: struct} = unpackStructure(view, size, pos);
 
     return {finalPos, data: tryGetStructMonad(struct)};
@@ -392,7 +393,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
     }
 }
 
-function unwindList(data: List, keys: string[]) {
+function unwindList(data: List, keys: string[]): {[key: string]: Monad<any>} {
     let index = 0;
     const agg = {};
 
@@ -415,7 +416,7 @@ type PathParam = [List<NodeMonad>, List<UnboundRelationship>, List<Num>];
 
 function mapListToPath(list: List): Path {
     // @todo: typings and no desctructuring
-    let [nodes, relations, sequence] = <PathParam>[...list];
+    let [nodes, relations, sequence] = <PathParam> [...list];
     const noSequences = sequence.getLength().getOrElse(0);
     const segments: PathSegment[] = [];
     let start: NodeMonad = nodes.first().getOrElse(NodeMonad.EMPTY);
