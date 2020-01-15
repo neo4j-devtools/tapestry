@@ -19,6 +19,7 @@ export interface IConnectionParams {
     port: number;
     userAgent: string;
     packer?(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any): number[];
+    unpacker?(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: number[]): any;
 }
 
 export const DEFAULT_PARAMS: IConnectionParams = {

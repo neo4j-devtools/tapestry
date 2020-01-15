@@ -20,6 +20,14 @@ export const BOOLEAN_FALSE_BYTES = 0xB2;
 export const NULL_BYTES = 0xC0;
 
 export function packRequestData(protocol: BOLT_PROTOCOLS, data: any, packer = defaultPacker) {
+    switch (protocol) {
+        case BOLT_PROTOCOLS.V1:
+        default:
+            return packRequestDataV1(protocol, data, packer);
+    }
+}
+
+function packRequestDataV1(protocol: BOLT_PROTOCOLS, data: any, packer = defaultPacker) {
     if (Array.isArray(data)) {
         return packer(protocol, BOLT_REQUEST_DATA_TYPE.ARRAY, data);
     }
@@ -57,7 +65,7 @@ function defaultPacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYP
                 HEADER_SIZE_LIMITS.LARGE_ARRAY
             );
 
-            return [...headers, ...flatMap(take(data, size), (chunk) => packRequestData(protocol, chunk, packRequestData))];
+            return [...headers, ...flatMap(take(data, size), (chunk) => packRequestDataV1(protocol, chunk, packRequestDataV1))];
         }
 
         case 'boolean': {
@@ -182,8 +190,8 @@ function packObject(protocol: BOLT_PROTOCOLS, val: any): number[] {
     return [
         ...headers,
         ...flatMap(take(tmp, size), ([key, value]) => [
-            ...packRequestData(protocol, key),
-            ...packRequestData(protocol, value),
+            ...packRequestDataV1(protocol, key),
+            ...packRequestDataV1(protocol, value),
         ])
     ];
 }
