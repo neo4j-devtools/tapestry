@@ -1,21 +1,25 @@
 import {AsyncSubject, Subject} from 'rxjs';
 import {merge} from 'lodash';
 import autobind from 'autobind-decorator';
+import uuid from 'uuid/v4';
 
 import {IConnectionParams} from '../types';
 import {DEFAULT_PARAMS} from '../driver.constants';
 import {unpackResponseData} from '../packstream';
 import {createMessage, getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
 import {BOLT_PROTOCOLS} from './connection.constants';
-import {map, switchMap} from 'rxjs/operators';
+import {map, switchMap, takeUntil} from 'rxjs/operators';
 
 export default class Connection<T extends any = any> extends Subject<T> {
+    public readonly id = uuid();
+
     protected readonly connectionParams: IConnectionParams<T>;
     protected readonly socket: WebSocket;
     protected protocol: BOLT_PROTOCOLS = BOLT_PROTOCOLS.UNKNOWN;
     protected didAuth: boolean = false;
     protected incomingData = new ArrayBuffer(0);
     protected readySubject = new AsyncSubject<void>();
+    protected terminationSubject = new AsyncSubject<void>();
 
     constructor(params: Partial<IConnectionParams<T>>) {
         super();
@@ -34,13 +38,26 @@ export default class Connection<T extends any = any> extends Subject<T> {
         this.socket.onclose = this.onClose;
     }
 
+    // @todo: figure out what this should actually do and return and stuff
     public sendMessage(cmd: number, data: any[]) {
-        // @todo: figure out what this should actually return
         return this.readySubject.pipe(
+            takeUntil(this.terminationSubject),
             map(() => {
-                this.socket.send(createMessage<T>(this.protocol, cmd, data, this.connectionParams.packer))
+                this.socket.send(createMessage<T>(this.protocol, cmd, data, this.connectionParams.packer));
             }),
             switchMap(() => this)
+        ).toPromise();
+    }
+
+    // @todo: not very graceful
+    public terminate() {
+        this.terminationSubject.next();
+        this.terminationSubject.complete();
+
+        return this.terminationSubject.pipe(
+            map(() => {
+                this.socket.close()
+            })
         ).toPromise();
     }
 

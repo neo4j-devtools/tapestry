@@ -8,5 +8,7 @@ const [retrieveCmd, retrieveData] = getRetrieveMessage();
 
 con.sendMessage(testCmd, testData);
 con.sendMessage(retrieveCmd, retrieveData);
-
-con.subscribe(console.log);
+con.subscribe((val) => {
+    console.log(val);
+    con.terminate();
+});
