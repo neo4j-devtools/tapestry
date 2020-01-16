@@ -5,7 +5,7 @@ export interface IMonad<T> extends Iterable<T> {
     isEmpty(): boolean;
     toString(formatter?: (val: T) => string): string
     map(project: (value: T) => T): IMonad<T>;
-    flatMap<R, M extends Iterable<R>>(project: (value: T) => M): M;
+    flatMap<M extends IMonad<any> = Monad<any>>(project: (value: T) => M): M;
 }
 
 export default class Monad<T extends any> implements IMonad<T> {
@@ -66,11 +66,11 @@ export default class Monad<T extends any> implements IMonad<T> {
         return new this.constructor(project(this.original));
     }
 
-    flatMap<R, M extends Iterable<R>>(project: (value: T) => M): M {
+    flatMap<M extends IMonad<any> = Monad<any>>(project: (value: T) => M): M {
         return project(this.original);
     }
 
     toString() {
-        return `${this}`;
+        return `${this.original}`;
     }
 }

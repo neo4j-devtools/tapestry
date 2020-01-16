@@ -1,10 +1,9 @@
 import {merge} from 'lodash';
 import autobind from 'autobind-decorator';
 
-import {packRequestData, unpackResponseData} from './packstream';
-import {getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
-import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
-import { BOLT_REQUEST_DATA_TYPE } from './packstream/packer.constants';
+import {unpackResponseData, Packer, Unpacker} from './packstream';
+import {getAuthMessage, getHandshakeMessage, getRetrieveMessage, getTestMessage, joinArrayBuffers} from './connection.utils';
+import {BOLT_PROTOCOLS} from './connection.constants';
 
 export interface IAuth {
     scheme: 'basic',
@@ -18,8 +17,8 @@ export interface IConnectionParams {
     host: string;
     port: number;
     userAgent: string;
-    packer?(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any): number[];
-    unpacker?(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: number[]): any;
+    packer?: Packer;
+    unpacker?: Unpacker;
 }
 
 export const DEFAULT_PARAMS: IConnectionParams = {
@@ -49,7 +48,7 @@ export default class Connection {
         this.connectionParams = connectionParams;
 
         this.socket = new WebSocket(
-            `${connectionParams.secure ? 'wss': 'ws'}://${connectionParams.host}:${connectionParams.port}`
+            `${connectionParams.secure ? 'wss' : 'ws'}://${connectionParams.host}:${connectionParams.port}`
         );
         this.socket.binaryType = 'arraybuffer';
         this.socket.onopen = this.onOpen;
@@ -106,7 +105,7 @@ export default class Connection {
     // @todo: better name
     @autobind
     private onChunk(view: DataView) {
-        const unpacked = unpackResponseData(view);
+        const unpacked = unpackResponseData(this.protocol, view, this.connectionParams.unpacker);
 
         console.log('onChunk', unpacked);
     }
@@ -115,15 +114,15 @@ export default class Connection {
     private onHandshake(data: DataView) {
         this.protocol = data.getInt32(0, false);
 
-        this.socket.send(getAuthMessage(this.protocol, this.connectionParams));
+        this.socket.send(getAuthMessage(this.protocol, this.connectionParams, this.connectionParams.packer));
     }
 
     @autobind
     private onAuth(_: DataView) {
         this.didAuth = true;
 
-        this.socket.send(getTestMessage(this.protocol));
-        this.socket.send(getRetrieveMessage(this.protocol));
+        this.socket.send(getTestMessage(this.protocol, this.connectionParams.packer));
+        this.socket.send(getRetrieveMessage(this.protocol, this.connectionParams.packer));
     }
 
     @autobind
@@ -151,46 +150,3 @@ export default class Connection {
         console.error('onError', err);
     }
 }
-
-function getTestMessage(protocol: BOLT_PROTOCOLS) {
-    const noFields = 2;
-    const data = [
-        0xB0 + noFields,
-        V1_BOLT_MESSAGES.RUN,
-        ...packRequestData(protocol, 'MATCH p=()-[r:FOLLOWS]->() RETURN p'),
-        ...packRequestData(protocol, {})
-    ];
-    const chunkSize = data.length;
-
-    switch (protocol) {
-        default:
-            return new Uint8Array([
-                chunkSize >> 8,
-                chunkSize & 0xFF,
-                ...data,
-                0,
-                0
-            ]);
-    }
-}
-
-function getRetrieveMessage(protocol: BOLT_PROTOCOLS) {
-    const noFields = 0;
-    const data: number[] = [
-        0xB0 + noFields,
-        V1_BOLT_MESSAGES.PULL_ALL
-    ];
-    const chunkSize = data.length;
-
-    switch (protocol) {
-        default:
-            return new Uint8Array([
-                chunkSize >> 8,
-                chunkSize & 0xFF,
-                ...data,
-                0,
-                0
-            ]);
-    }
-}
-

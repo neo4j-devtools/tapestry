@@ -4,6 +4,7 @@ import None from '../primitive/none.monad';
 import Maybe from '../primitive/maybe.monad';
 
 import {formatAsFloat} from '../../utils/spatial.utils';
+import Str from '../primitive/str.monad';
 
 export interface RawPoint {
     srid: Num;
@@ -67,13 +68,13 @@ export default class Point extends Monad<RawPoint> {
     toString() {
         const ourZ = this.getZ();
 
-        return ourZ.flatMap((zVal) => None.isNone(zVal)
+        return ourZ.flatMap((zVal) => Str.of(None.isNone(zVal)
             ? `Point{srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
                 this.getX()
             )}, y=${formatAsFloat(this.getY())}}`
             : `Point{srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
                 this.getX()
             )}, y=${formatAsFloat(this.getY())}, z=${formatAsFloat(zVal)}}`
-        );
+        )).get();
     }
 }

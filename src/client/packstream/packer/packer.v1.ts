@@ -1,61 +1,46 @@
 import {entries, flatMap, take} from 'lodash';
 
-import {BOLT_PROTOCOLS} from '../connection.constants';
-import {BOLT_REQUEST_DATA_TYPE} from './packer.constants';
+import {PackerInternal} from './packer';
 
-export enum HEADER_SIZE_LIMITS {
-    TINY_ARRAY = 0x90,
-    MEDIUM_ARRAY = 0xD5,
-    LARGE_ARRAY = 0xD6,
-    TINY_STRING = 0x80,
-    MEDIUM_STRING = 0xD1,
-    LARGE_STRING = 0xD2,
-    TINY_OBJECT = 0xA0,
-    MEDIUM_OBJECT = 0xD9,
-    LARGE_OBJECT = 0xDA
-}
-export const MAX_HEADER_SIZE = 0x7FFFFFFF;
-export const BOOLEAN_TRUE_BYTES = 0xB3;
-export const BOOLEAN_FALSE_BYTES = 0xB2;
-export const NULL_BYTES = 0xC0;
+import {BOLT_PROTOCOLS} from '../../connection.constants';
+import {
+    BOLT_REQUEST_DATA_TYPE,
+    BOOLEAN_FALSE_BYTES,
+    BOOLEAN_TRUE_BYTES,
+    HEADER_SIZE_LIMITS,
+    MAX_HEADER_SIZE,
+    NULL_BYTES
+} from './packer.constants';
 
-export function packRequestData(protocol: BOLT_PROTOCOLS, data: any, packer = defaultPacker) {
-    switch (protocol) {
-        case BOLT_PROTOCOLS.V1:
-        default:
-            return packRequestDataV1(protocol, data, packer);
-    }
-}
-
-function packRequestDataV1(protocol: BOLT_PROTOCOLS, data: any, packer = defaultPacker) {
+export function packV1Message(data: any, packer: PackerInternal) {
     if (Array.isArray(data)) {
-        return packer(protocol, BOLT_REQUEST_DATA_TYPE.ARRAY, data);
+        return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.ARRAY, data, packer);
     }
 
     switch (typeof data) {
         case BOLT_REQUEST_DATA_TYPE.BOOLEAN: {
-            return packer(protocol, BOLT_REQUEST_DATA_TYPE.BOOLEAN, data);
+            return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.BOOLEAN, data, packer);
         }
 
         case BOLT_REQUEST_DATA_TYPE.NUMBER: {
-            return packer(protocol, BOLT_REQUEST_DATA_TYPE.NUMBER, data);
+            return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.NUMBER, data, packer);
         }
 
         case BOLT_REQUEST_DATA_TYPE.STRING: {
-            return packer(protocol, BOLT_REQUEST_DATA_TYPE.STRING, data);
+            return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.STRING, data, packer);
         }
 
         case BOLT_REQUEST_DATA_TYPE.OBJECT: {
-            return packer(protocol, BOLT_REQUEST_DATA_TYPE.OBJECT, data);
+            return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.OBJECT, data, packer);
         }
 
         default: {
-            return packer(protocol, BOLT_REQUEST_DATA_TYPE.UNKNOWN, data);
+            return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.UNKNOWN, data, packer);
         }
     }
 }
 
-function defaultPacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any): number[] {
+export function packerV1(_: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any, packer: PackerInternal): number[] {
     switch (dataType) {
         case BOLT_REQUEST_DATA_TYPE.ARRAY: {
             const {size, headers} = packHeader(
@@ -65,7 +50,7 @@ function defaultPacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYP
                 HEADER_SIZE_LIMITS.LARGE_ARRAY
             );
 
-            return [...headers, ...flatMap(take(data, size), (chunk) => packRequestDataV1(protocol, chunk, packRequestDataV1))];
+            return [...headers, ...flatMap(take(data, size), (chunk) => packV1Message(chunk, packer))];
         }
 
         case 'boolean': {
@@ -90,7 +75,7 @@ function defaultPacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYP
 
         case 'object': {
             return data
-                ? packObject(protocol, data)
+                ? packObject(data, packer)
                 : [NULL_BYTES];
         }
 
@@ -178,7 +163,7 @@ function packString(str: string): number[] {
     });
 }
 
-function packObject(protocol: BOLT_PROTOCOLS, val: any): number[] {
+function packObject(val: any, packer: PackerInternal): number[] {
     const tmp = entries(val);
     const {size, headers} = packHeader(
         tmp.length,
@@ -190,8 +175,8 @@ function packObject(protocol: BOLT_PROTOCOLS, val: any): number[] {
     return [
         ...headers,
         ...flatMap(take(tmp, size), ([key, value]) => [
-            ...packRequestDataV1(protocol, key),
-            ...packRequestDataV1(protocol, value),
+            ...packV1Message(key, packer),
+            ...packV1Message(value, packer),
         ])
     ];
 }

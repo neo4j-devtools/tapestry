@@ -1,6 +1,8 @@
+import {flatMap} from 'lodash';
+
 import {IConnectionParams} from './connection.class';
 
-import {packRequestData} from './packstream';
+import {Packer, packRequestData} from './packstream';
 import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
 
 export function joinArrayBuffers(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
@@ -24,24 +26,51 @@ export function getHandshakeMessage() {
     ]);
 }
 
-export function getAuthMessage(protocol: BOLT_PROTOCOLS, params: IConnectionParams) {
-    const noFields = 2;
-    const data = [
+export function createMessage(protocol: BOLT_PROTOCOLS, message: number, requestData: any[], packer?: Packer) {
+    const noFields = requestData.length;
+    const messageData = [
         0xB0 + noFields,
-        V1_BOLT_MESSAGES.INIT,
-        ...packRequestData(protocol, params.userAgent),
-        ...packRequestData(protocol, params.auth)
+        message,
+        ...flatMap(requestData, (data) => packRequestData(protocol, data, packer))
     ];
-    const chunkSize = data.length;
+    const chunkSize = messageData.length;
 
     switch (protocol) {
         default:
             return new Uint8Array([
                 chunkSize >> 8,
                 chunkSize & 0xFF,
-                ...data,
+                ...messageData,
                 0,
                 0
             ]);
     }
 }
+
+export function getAuthMessage(protocol: BOLT_PROTOCOLS, params: IConnectionParams, packer?: Packer) {
+    return createMessage(
+        protocol,
+        V1_BOLT_MESSAGES.INIT,
+        [params.userAgent, params.auth],
+        packer
+    );
+}
+
+export function getTestMessage(protocol: BOLT_PROTOCOLS, packer?: Packer) {
+    return createMessage(
+        protocol,
+        V1_BOLT_MESSAGES.RUN,
+        ['MATCH p=()-[r:FOLLOWS]->() RETURN p', {}],
+        packer
+    );
+}
+
+export function getRetrieveMessage(protocol: BOLT_PROTOCOLS, packer?: Packer) {
+    return createMessage(
+        protocol,
+        V1_BOLT_MESSAGES.PULL_ALL,
+        [],
+        packer
+    );
+}
+
