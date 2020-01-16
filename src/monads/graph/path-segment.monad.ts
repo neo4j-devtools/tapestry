@@ -9,7 +9,7 @@ export type RawPathSegment = {
 }
 
 export default class PathSegment extends Monad<RawPathSegment> {
-    static isPathSegment(val: any) {
+    static isPathSegment(val: any): val is PathSegment {
         return val instanceof PathSegment;
     }
 

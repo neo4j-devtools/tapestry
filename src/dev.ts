@@ -1,6 +1,12 @@
-import {Connection} from './index';
+import {Connection} from './client';
+import {getRetrieveMessage, getTestMessage} from './client/driver.utils';
+import {Monad} from './monads';
 
-// @ts-ignore
-const con = new Connection({});
+const con = new Connection<Monad<any>>({});
+const [testCmd, testData] = getTestMessage();
+const [retrieveCmd, retrieveData] = getRetrieveMessage();
 
-console.log(con);
+con.sendMessage(testCmd, testData);
+con.sendMessage(retrieveCmd, retrieveData);
+
+con.subscribe(console.log);

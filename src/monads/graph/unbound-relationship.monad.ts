@@ -13,7 +13,7 @@ export interface RawUnboundRelationship {
 export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     static EMPTY = UnboundRelationship.of({});
 
-    static isUnboundRelationship(val: any) {
+    static isUnboundRelationship(val: any): val is UnboundRelationship {
         return val instanceof UnboundRelationship;
     }
 

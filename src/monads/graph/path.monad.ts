@@ -12,7 +12,7 @@ export type RawPath = {
 };
 
 export default class Path extends Monad<RawPath> {
-    static isPath(val: any) {
+    static isPath(val: any): val is Path {
         return val instanceof Path;
     }
 

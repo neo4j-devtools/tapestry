@@ -14,7 +14,7 @@ export interface RawRelationship {
 export default class Relationship extends Monad<RawRelationship> {
     static EMPTY = Relationship.of({});
 
-    static isRelationship(val: any) {
+    static isRelationship(val: any): val is Relationship {
         return val instanceof Relationship;
     }
 

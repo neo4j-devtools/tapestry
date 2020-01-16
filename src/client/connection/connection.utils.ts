@@ -1,8 +1,8 @@
 import {flatMap} from 'lodash';
 
-import {IConnectionParams} from './connection.class';
+import {IConnectionParams} from '../types';
 
-import {Packer, packRequestData} from './packstream';
+import {Packer, packRequestData} from '../packstream/index';
 import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
 
 export function joinArrayBuffers(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
@@ -26,11 +26,11 @@ export function getHandshakeMessage() {
     ]);
 }
 
-export function createMessage(protocol: BOLT_PROTOCOLS, message: number, requestData: any[], packer?: Packer) {
+export function createMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, cmd: number, requestData: any[], packer?: Packer<T>) {
     const noFields = requestData.length;
     const messageData = [
         0xB0 + noFields,
-        message,
+        cmd,
         ...flatMap(requestData, (data) => packRequestData(protocol, data, packer))
     ];
     const chunkSize = messageData.length;
@@ -47,7 +47,7 @@ export function createMessage(protocol: BOLT_PROTOCOLS, message: number, request
     }
 }
 
-export function getAuthMessage(protocol: BOLT_PROTOCOLS, params: IConnectionParams, packer?: Packer) {
+export function getAuthMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, params: IConnectionParams<any>, packer?: Packer<T>) {
     return createMessage(
         protocol,
         V1_BOLT_MESSAGES.INIT,
@@ -55,22 +55,3 @@ export function getAuthMessage(protocol: BOLT_PROTOCOLS, params: IConnectionPara
         packer
     );
 }
-
-export function getTestMessage(protocol: BOLT_PROTOCOLS, packer?: Packer) {
-    return createMessage(
-        protocol,
-        V1_BOLT_MESSAGES.RUN,
-        ['MATCH p=()-[r:FOLLOWS]->() RETURN p', {}],
-        packer
-    );
-}
-
-export function getRetrieveMessage(protocol: BOLT_PROTOCOLS, packer?: Packer) {
-    return createMessage(
-        protocol,
-        V1_BOLT_MESSAGES.PULL_ALL,
-        [],
-        packer
-    );
-}
-

@@ -16,18 +16,18 @@ import {
     None,
     Num,
     Path,
+    PathSegment,
     Point,
     Relationship,
     Str,
     TimeMonad,
     UnboundRelationship
-} from '../../../monads/index';
-import PathSegment from '../../../monads/graph/path-segment.monad';
+} from '../../../monads';
 import {BOLT_RESPONSE_DATA_TYPES, NUMBER_TYPES} from './unpacker.constants';
 import {UnpackerInternal, UnpackerReturn} from './unpacker';
-import {BOLT_PROTOCOLS} from '../../connection.constants';
+import {BOLT_PROTOCOLS} from '../../connection/connection.constants';
 
-export function unpackerV1(_: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number, unpacker: UnpackerInternal): UnpackerReturn<any> {
+export function unpackerV1(_: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number, unpacker: UnpackerInternal): UnpackerReturn<Monad<any>> {
     switch (dataType) {
         case BOLT_RESPONSE_DATA_TYPES.INT8:
         case BOLT_RESPONSE_DATA_TYPES.INT16:
@@ -70,7 +70,8 @@ export function unpackerV1(_: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES
             return unpackBool(view, pos);
         }
 
-        case BOLT_RESPONSE_DATA_TYPES.UNKNOWN: {
+        case BOLT_RESPONSE_DATA_TYPES.UNKNOWN:
+        default: {
             return unpackNone(view, pos);
         }
     }

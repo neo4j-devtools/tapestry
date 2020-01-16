@@ -1,48 +1,25 @@
+import {AsyncSubject, Subject} from 'rxjs';
 import {merge} from 'lodash';
 import autobind from 'autobind-decorator';
 
-import {unpackResponseData, Packer, Unpacker} from './packstream';
-import {getAuthMessage, getHandshakeMessage, getRetrieveMessage, getTestMessage, joinArrayBuffers} from './connection.utils';
+import {IConnectionParams} from '../types';
+import {DEFAULT_PARAMS} from '../driver.constants';
+import {unpackResponseData} from '../packstream';
+import {createMessage, getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
 import {BOLT_PROTOCOLS} from './connection.constants';
+import {map, switchMap} from 'rxjs/operators';
 
-export interface IAuth {
-    scheme: 'basic',
-    principal: string,
-    credentials: string;
-}
-
-export interface IConnectionParams {
-    secure?: true;
-    auth: IAuth;
-    host: string;
-    port: number;
-    userAgent: string;
-    packer?: Packer;
-    unpacker?: Unpacker;
-}
-
-export const DEFAULT_PARAMS: IConnectionParams = {
-    auth: {
-        scheme: 'basic',
-        principal: 'neo4j',
-        credentials: 'newpassword'
-    },
-    host: 'localhost',
-    port: 7687,
-    // @ts-ignore
-    userAgent: `tapestry/${'1.0.0'}`
-};
-
-export default class Connection {
-    static VERSION = '1.0.0'; // @todo: dynamic
-
-    protected readonly connectionParams: IConnectionParams;
+export default class Connection<T extends any = any> extends Subject<T> {
+    protected readonly connectionParams: IConnectionParams<T>;
     protected readonly socket: WebSocket;
     protected protocol: BOLT_PROTOCOLS = BOLT_PROTOCOLS.UNKNOWN;
     protected didAuth: boolean = false;
     protected incomingData = new ArrayBuffer(0);
+    protected readySubject = new AsyncSubject<void>();
 
-    constructor(params: Partial<IConnectionParams>) {
+    constructor(params: Partial<IConnectionParams<T>>) {
+        super();
+
         const connectionParams = merge({}, DEFAULT_PARAMS, params);
 
         this.connectionParams = connectionParams;
@@ -55,6 +32,16 @@ export default class Connection {
         this.socket.onmessage = this.onMessage;
         this.socket.onerror = this.onError;
         this.socket.onclose = this.onClose;
+    }
+
+    public sendMessage(cmd: number, data: any[]) {
+        // @todo: figure out what this should actually return
+        return this.readySubject.pipe(
+            map(() => {
+                this.socket.send(createMessage<T>(this.protocol, cmd, data, this.connectionParams.packer))
+            }),
+            switchMap(() => this)
+        ).toPromise();
     }
 
     private get didHandshake() {
@@ -73,6 +60,8 @@ export default class Connection {
     @autobind
     private onClose(val: any) {
         console.log('onClose', val);
+
+        this.complete();
     }
 
     @autobind
@@ -100,14 +89,20 @@ export default class Connection {
             messageData = new ArrayBuffer(0);
             this.incomingData = this.incomingData.slice(endOfChunk);
         }
+
+        // emit once more if we have complete chunks
+        // @todo: improve check for incomingData being two 0's
+        if (this.incomingData.byteLength === 2) {
+            this.onChunk(new DataView(messageData));
+        }
     }
 
     // @todo: better name
     @autobind
     private onChunk(view: DataView) {
-        const unpacked = unpackResponseData(this.protocol, view, this.connectionParams.unpacker);
+        const {data} = unpackResponseData<T>(this.protocol, view, this.connectionParams.unpacker);
 
-        console.log('onChunk', unpacked);
+        this.next(data);
     }
 
     @autobind
@@ -121,8 +116,9 @@ export default class Connection {
     private onAuth(_: DataView) {
         this.didAuth = true;
 
-        this.socket.send(getTestMessage(this.protocol, this.connectionParams.packer));
-        this.socket.send(getRetrieveMessage(this.protocol, this.connectionParams.packer));
+        // signal ready to send messages
+        this.readySubject.next();
+        this.readySubject.complete();
     }
 
     @autobind
@@ -147,6 +143,6 @@ export default class Connection {
 
     @autobind
     private onError(err: any) {
-        console.error('onError', err);
+        this.error(err);
     }
 }

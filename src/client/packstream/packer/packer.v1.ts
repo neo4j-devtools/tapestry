@@ -2,7 +2,7 @@ import {entries, flatMap, take} from 'lodash';
 
 import {PackerInternal} from './packer';
 
-import {BOLT_PROTOCOLS} from '../../connection.constants';
+import {BOLT_PROTOCOLS} from '../../connection/connection.constants';
 import {
     BOLT_REQUEST_DATA_TYPE,
     BOOLEAN_FALSE_BYTES,
@@ -12,7 +12,7 @@ import {
     NULL_BYTES
 } from './packer.constants';
 
-export function packV1Message(data: any, packer: PackerInternal) {
+export function packV1Message(data: any, packer: PackerInternal<any>) {
     if (Array.isArray(data)) {
         return packer(BOLT_PROTOCOLS.V1, BOLT_REQUEST_DATA_TYPE.ARRAY, data, packer);
     }
@@ -40,7 +40,7 @@ export function packV1Message(data: any, packer: PackerInternal) {
     }
 }
 
-export function packerV1(_: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any, packer: PackerInternal): number[] {
+export function packerV1(_: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: any, packer: PackerInternal<any>): number[] {
     switch (dataType) {
         case BOLT_REQUEST_DATA_TYPE.ARRAY: {
             const {size, headers} = packHeader(
@@ -163,7 +163,7 @@ function packString(str: string): number[] {
     });
 }
 
-function packObject(val: any, packer: PackerInternal): number[] {
+function packObject(val: any, packer: PackerInternal<any>): number[] {
     const tmp = entries(val);
     const {size, headers} = packHeader(
         tmp.length,

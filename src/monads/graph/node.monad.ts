@@ -15,7 +15,7 @@ export interface RawNode {
 export default class NodeMonad extends Monad<RawNode> {
     static EMPTY = NodeMonad.of({});
 
-    static isNode(val: any) {
+    static isNode(val: any): val is NodeMonad {
         return val instanceof NodeMonad;
     }
 
