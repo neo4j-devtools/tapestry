@@ -1,19 +1,22 @@
 import {AsyncSubject, Subject} from 'rxjs';
-import {merge} from 'lodash';
 import autobind from 'autobind-decorator';
 import uuid from 'uuid/v4';
 
 import {IConnectionParams} from '../types';
-import {DEFAULT_PARAMS} from '../driver.constants';
+import {DRIVER_COMMANDS, DRIVER_HEADERS} from '../driver.constants';
 import {unpackResponseData} from '../packstream';
 import {createMessage, getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
 import {BOLT_PROTOCOLS} from './connection.constants';
 import {map, switchMap, takeUntil} from 'rxjs/operators';
 
-export default class Connection<T extends any = any> extends Subject<T> {
+export interface IMessage<Data = any> {
+    header: DRIVER_HEADERS;
+    data: Data;
+}
+
+export default class Connection<Data extends any = any> extends Subject<IMessage<Data>> {
     public readonly id = uuid();
 
-    protected readonly connectionParams: IConnectionParams<T>;
     protected readonly socket: WebSocket;
     protected protocol: BOLT_PROTOCOLS = BOLT_PROTOCOLS.UNKNOWN;
     protected didAuth: boolean = false;
@@ -21,12 +24,8 @@ export default class Connection<T extends any = any> extends Subject<T> {
     protected readySubject = new AsyncSubject<void>();
     protected terminationSubject = new AsyncSubject<void>();
 
-    constructor(params: Partial<IConnectionParams<T>>) {
+    constructor(protected readonly connectionParams: IConnectionParams<Data>) {
         super();
-
-        const connectionParams = merge({}, DEFAULT_PARAMS, params);
-
-        this.connectionParams = connectionParams;
 
         this.socket = new WebSocket(
             `${connectionParams.secure ? 'wss' : 'ws'}://${connectionParams.host}:${connectionParams.port}`
@@ -39,11 +38,11 @@ export default class Connection<T extends any = any> extends Subject<T> {
     }
 
     // @todo: figure out what this should actually do and return and stuff
-    public sendMessage(cmd: number, data: any[]) {
+    public sendMessage(cmd: DRIVER_COMMANDS, data: any[]) {
         return this.readySubject.pipe(
             takeUntil(this.terminationSubject),
             map(() => {
-                this.socket.send(createMessage<T>(this.protocol, cmd, data, this.connectionParams.packer));
+                this.socket.send(createMessage<Data>(this.protocol, cmd, data, this.connectionParams.packer));
             }),
             switchMap(() => this)
         ).toPromise();
@@ -117,9 +116,13 @@ export default class Connection<T extends any = any> extends Subject<T> {
     // @todo: better name
     @autobind
     private onChunk(view: DataView) {
-        const {data} = unpackResponseData<T>(this.protocol, view, this.connectionParams.unpacker);
+        const {data} = unpackResponseData<Data>(this.protocol, view, this.connectionParams.unpacker);
 
-        this.next(data);
+        this.next({
+            // @todo: cleanup
+            header: this.connectionParams.getHeader!(data),
+            data: this.connectionParams.getData!(data)
+        });
     }
 
     @autobind

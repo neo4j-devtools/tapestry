@@ -1,15 +1,15 @@
-import {V1_BOLT_MESSAGES} from './connection/connection.constants';
+import {DRIVER_COMMANDS} from './driver.constants';
 
-export function getTestMessage(): [number, any[]] {
+export function getTestMessage(): [DRIVER_COMMANDS, any[]] {
     return [
-        V1_BOLT_MESSAGES.RUN,
+        DRIVER_COMMANDS.RUN,
         ['RETURN 1', {}]
     ]
 }
 
-export function getRetrieveMessage(): [number, any[]] {
+export function getRetrieveMessage(): [DRIVER_COMMANDS, any[]] {
     return [
-        V1_BOLT_MESSAGES.PULL_ALL,
+        DRIVER_COMMANDS.PULL_ALL,
         []
     ];
 }

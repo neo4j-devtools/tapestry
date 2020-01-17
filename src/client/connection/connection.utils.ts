@@ -4,6 +4,7 @@ import {IConnectionParams} from '../types';
 
 import {Packer, packRequestData} from '../packstream/index';
 import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
+import {DRIVER_COMMANDS} from '../driver.constants';
 
 export function joinArrayBuffers(buf1: ArrayBuffer, buf2: ArrayBuffer): ArrayBuffer {
     const byteLength = buf1.byteLength + buf2.byteLength;
@@ -26,11 +27,20 @@ export function getHandshakeMessage() {
     ]);
 }
 
-export function createMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, cmd: number, requestData: any[], packer?: Packer<T>) {
+function getCommandForProtocol(protocol: BOLT_PROTOCOLS, cmd: DRIVER_COMMANDS): number {
+    switch (protocol) {
+        case BOLT_PROTOCOLS.V1:
+        default: {
+            return V1_BOLT_MESSAGES[cmd];
+        }
+    }
+}
+
+export function createMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, cmd: DRIVER_COMMANDS, requestData: any[], packer?: Packer<T>) {
     const noFields = requestData.length;
     const messageData = [
         0xB0 + noFields,
-        cmd,
+        getCommandForProtocol(protocol, cmd),
         ...flatMap(requestData, (data) => packRequestData(protocol, data, packer))
     ];
     const chunkSize = messageData.length;
@@ -50,7 +60,7 @@ export function createMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, cmd
 export function getAuthMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, params: IConnectionParams<any>, packer?: Packer<T>) {
     return createMessage(
         protocol,
-        V1_BOLT_MESSAGES.INIT,
+        DRIVER_COMMANDS.INIT,
         [params.userAgent, params.auth],
         packer
     );

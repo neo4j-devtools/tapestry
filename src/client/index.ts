@@ -6,4 +6,4 @@ if (!has(global, 'WebSocket')) {
     global['WebSocket'] = require('ws');
 }
 
-export {default as Connection} from './connection/connection.class';
+export {default as Driver} from './driver.class';

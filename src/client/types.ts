@@ -1,6 +1,7 @@
-import {List, Monad} from '../monads/index';
+import {List, Monad} from '../monads';
 import {Packer} from './packstream/packer/packer';
 import {Unpacker} from './packstream/unpacker/unpacker';
+import {DRIVER_HEADERS} from './driver.constants';
 
 export interface IAuth {
     scheme: 'basic',
@@ -8,12 +9,14 @@ export interface IAuth {
     credentials: string;
 }
 
-export interface IConnectionParams<T extends any = List<Monad<any>>> {
+export interface IConnectionParams<Data extends any = List<Monad<any>>> {
     secure?: true;
     auth: IAuth;
     host: string;
     port: number;
     userAgent: string;
-    packer?: Packer<T>;
-    unpacker?: Unpacker<T>;
+    getHeader?: (unpacked: Data) => DRIVER_HEADERS,
+    getData?: (unpacked: Data) => Data,
+    packer?: Packer<Data>;
+    unpacker?: Unpacker<Data>;
 }
