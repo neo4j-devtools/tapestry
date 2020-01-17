@@ -33,7 +33,6 @@ export default class Driver<Data = any> {
 
     constructor(protected params: Partial<IConnectionParams<Data>>) {
         this.addConnection();
-        this.getNextAvailableConnection();
     }
 
     runQuery(cypher: string, params: any = {}) {
