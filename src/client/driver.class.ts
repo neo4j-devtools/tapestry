@@ -19,21 +19,18 @@ export interface IRequest {
 }
 
 export default class Driver<Data = any> {
+    static MAX_POOL_SIZE: number = 1;
+
     protected connections: Connection<Data>[] = [];
     protected availableConnection: Subject<Connection<Data>> = new Subject<Connection<Data>>();
     protected requestQueue: Subject<IRequest> = new Subject();
-    // @ts-ignore
     protected processing: Observable<[IRequest, Connection<Data>]> = this.requestQueue.pipe(
-        flatMap((request) => {
-            return this.availableConnection.pipe(
-                map((connection) => [request, connection])
-            );
-        })
+        flatMap((request) => this.availableConnection.pipe(
+            map((connection): [IRequest, Connection<Data>] => [request, connection])
+        ))
     );
 
-    constructor(protected params: Partial<IConnectionParams<Data>>) {
-        this.addConnection();
-    }
+    constructor(protected params: Partial<IConnectionParams<Data>>) {}
 
     runQuery(cypher: string, params: any = {}) {
         const requestID = uuid();
@@ -56,16 +53,15 @@ export default class Driver<Data = any> {
         });
 
         return this.processing.pipe(
-            skipWhile(([request]) => {
-                console.log((request));
-                return request.id !== requestID;
-            }),
+            skipWhile(([request]) => request.id !== requestID),
             take(1),
             flatMap(([request, connection]) => this.executeRequests(request, connection))
         );
     }
 
     protected executeRequests(request: IRequest, connection: Connection<Data>) {
+        console.log('exec', request.id);
+
         _forEach(request.queries, (query) => {
             connection.sendMessage(query.cmd, query.data);
         });
@@ -92,6 +88,7 @@ export default class Driver<Data = any> {
                     }
 
                     if (remaining === 0) {
+                        console.log('complete', request.id);
                         subscriber.complete();
                         this.availableConnection.next(connection);
                     }
@@ -111,10 +108,16 @@ export default class Driver<Data = any> {
         const connection = new Connection<Data>(connectionParams);
 
         this.connections.push(connection);
+
+        return connection;
     }
 
     protected getNextAvailableConnection() {
-        this.availableConnection.next(this.connections[0]);
+        if (this.connections.length < Driver.MAX_POOL_SIZE) {
+            const connection = this.addConnection();
+
+            this.availableConnection.next(connection);
+        }
     }
 
     protected terminateConnection(connection: Connection<Data>) {

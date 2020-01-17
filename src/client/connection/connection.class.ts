@@ -55,7 +55,7 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
 
         return this.terminationSubject.pipe(
             map(() => {
-                this.socket.close()
+                this.socket.close();
             })
         ).toPromise();
     }
@@ -109,6 +109,7 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
         // emit once more if we have complete chunks
         // @todo: improve check for incomingData being two 0's
         if (this.incomingData.byteLength === 2) {
+            this.incomingData = new ArrayBuffer(0);
             this.onChunk(new DataView(messageData));
         }
     }
