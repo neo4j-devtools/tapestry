@@ -15,7 +15,6 @@ type Rec = RecordMonad<Data, Header>;
 const driver = new Driver<Data, Header, Rec>({});
 
 console.time('runQuery');
-driver.runQuery('RETURN 1').subscribe(); // preflight
 const result = driver.runQuery('MATCH (n) RETURN n LIMIT 100')
     .pipe(
         flatMap((record) => record.getData()),
