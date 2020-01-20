@@ -1,10 +1,12 @@
 # Tapestry
-A neo4j driver spike.
+A neo4j driver spike illustrating an RXJS based monading driver with full typescript support and a pluggable packstream.
+
+Help keep the dream alive!
 
 ```Typescript
-import {reduce} from 'rxjs/operators';
-
-import {Driver, Dict, List, Monad, NodeMonad, RecordMonad} from '.';
+import {Driver} from './client';
+import {Dict, List, Monad, NodeMonad, RecordMonad, Str} from './monads';
+import {filter, flatMap, map, reduce} from 'rxjs/operators';
 
 type Header = Dict<Monad<any>>;
 type Data = List<NodeMonad>;
@@ -12,11 +14,22 @@ type Rec = RecordMonad<Data, Header>;
 
 const driver = new Driver<Data, Header, Rec>({});
 
-driver.runQuery('MATCH (n) RETURN n')
-    .pipe(reduce((agg, next) => agg.concat(next), List.of<Rec>([])))
-    .subscribe((res) => {
-        console.log('result', res);
-    });
+console.time('runQuery');
+driver.runQuery('RETURN 1').subscribe(); // preflight
+const result = driver.runQuery('MATCH (n) RETURN n LIMIT 100')
+    .pipe(
+        flatMap((record) => record.getData()),
+        map((node) => node.getIdentity()),
+        filter((id) => id.greaterThan(0)),
+        map(Str.of),
+        reduce((agg, next) => agg.concat(next), List.of<Str>([]))
+    ).toPromise();
+
+result.then((res) => {
+    console.log('runQuery', `${res}`);
+    console.timeEnd('runQuery');
+});
+
 ```
 
 ## Configuration
