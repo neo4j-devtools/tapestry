@@ -1,20 +1,15 @@
 import {AsyncSubject, Subject} from 'rxjs';
-import {map, switchMap, takeUntil} from 'rxjs/operators';
-import autobind from 'autobind-decorator';
+import {map, mapTo, switchMap, takeUntil} from 'rxjs/operators';
+import {boundMethod} from 'autobind-decorator';
 import uuid from 'uuid/v4';
 
-import {IConnectionConfig} from '../types';
-import {DRIVER_COMMANDS, DRIVER_HEADERS} from '../driver/driver.constants';
+import {IConnectionConfig, IClientMessage, IServerMessage} from '../types';
 import {unpackResponseData} from '../packstream';
 import {createMessage, getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
 import {BOLT_PROTOCOLS} from './connection.constants';
+import {InvalidOperationError} from '../errors';
 
-export interface IMessage<Data = any> {
-    header: DRIVER_HEADERS;
-    data: Data;
-}
-
-export default class Connection<Data extends any = any> extends Subject<IMessage<Data>> {
+export default class Connection<Data extends any = any> extends Subject<IServerMessage<Data>> {
     public readonly id = uuid();
 
     protected readonly socket: WebSocket;
@@ -23,6 +18,7 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
     protected incomingData = new ArrayBuffer(0);
     protected readySubject = new AsyncSubject<void>();
     protected terminationSubject = new AsyncSubject<void>();
+    protected isTerminated = false;
 
     constructor(protected readonly config: IConnectionConfig<Data>) {
         super();
@@ -45,42 +41,56 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
         return this.didHandshake && this.didAuth;
     }
 
-    // @todo: figure out what this should actually do and return and stuff
-    public sendMessage(cmd: DRIVER_COMMANDS, data: any[]) {
+    @boundMethod
+    public sendMessage(message: IClientMessage) {
+        if (this.isTerminated) {
+            throw new InvalidOperationError(`Connection ${this.id} is terminated`);
+        }
+
         return this.readySubject.pipe(
             takeUntil(this.terminationSubject),
             map(() => {
-                this.socket.send(createMessage<Data>(this.protocol, cmd, data, this.config.packer));
+                const {cmd, data, additionalData} = message;
+                const allData = additionalData
+                    ? [...data, ...additionalData(this.protocol)]
+                    : [...data];
+
+                this.socket.send(createMessage<Data>(this.protocol, cmd, allData, this.config.packer));
             }),
             switchMap(() => this)
-        ).toPromise();
+        )
     }
 
-    // @todo: not very graceful
-    public terminate() {
+    @boundMethod
+    public terminate(): Promise<this> {
+        if (this.isTerminated) {
+            return Promise.resolve(this);
+        }
+
+        this.isTerminated = true;
         this.terminationSubject.next();
         this.terminationSubject.complete();
 
         return this.terminationSubject.pipe(
             map(() => {
-                this.socket.close();
-            })
+                this.socket.close()
+            }),
+            mapTo(this)
+        // @todo: not very graceful
         ).toPromise();
     }
 
-    @autobind
+    @boundMethod
     private onOpen() {
         this.socket.send(getHandshakeMessage());
     }
 
-    @autobind
-    private onClose(val: any) {
-        console.log('onClose', val);
-
+    @boundMethod
+    private onClose() {
         this.complete();
     }
 
-    @autobind
+    @boundMethod
     private onData(view: DataView) {
         this.incomingData = joinArrayBuffers(this.incomingData, view.buffer);
 
@@ -107,8 +117,7 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
         }
     }
 
-    // @todo: better name
-    @autobind
+    @boundMethod
     private onChunk(view: DataView) {
         const {data} = unpackResponseData<Data>(this.protocol, view, this.config.unpacker);
 
@@ -119,14 +128,14 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
         });
     }
 
-    @autobind
+    @boundMethod
     private onHandshake(data: DataView) {
         this.protocol = data.getInt32(0, false);
 
         this.socket.send(getAuthMessage(this.protocol, this.config, this.config.packer));
     }
 
-    @autobind
+    @boundMethod
     private onAuth(_: DataView) {
         this.didAuth = true;
 
@@ -135,7 +144,7 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
         this.readySubject.complete();
     }
 
-    @autobind
+    @boundMethod
     private onMessage(event: Event) {
         // @ts-ignore
         const data = new DataView(event.data);
@@ -155,7 +164,7 @@ export default class Connection<Data extends any = any> extends Subject<IMessage
         this.onHandshake(data);
     }
 
-    @autobind
+    @boundMethod
     private onError(err: any) {
         this.error(err);
     }

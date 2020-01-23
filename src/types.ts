@@ -1,8 +1,6 @@
-import {List, Monad, RecordMonad} from './monads';
-import {DRIVER_HEADERS} from './driver/driver.constants';
-import {BOLT_PROTOCOLS} from './connection/connection.constants';
-import {BOLT_REQUEST_DATA_TYPE} from './packstream/packer/packer.constants';
-import {BOLT_RESPONSE_DATA_TYPES} from './packstream/unpacker/unpacker.constants';
+import {DRIVER_QUERY_COMMANDS, DRIVER_HEADERS, DRIVER_TRANSACTION_COMMANDS, DRIVER_RESULT_TYPE} from './driver';
+import {BOLT_PROTOCOLS} from './connection';
+import {BOLT_REQUEST_DATA_TYPE, BOLT_RESPONSE_DATA_TYPES} from './packstream';
 
 export type Packer<T extends any = any> = (protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: T) => number[];
 export type PackerInternal<T extends any = any> = (protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: T, packer: PackerInternal<T>) => number[];
@@ -11,15 +9,15 @@ export type Unpacker<T extends any = any> = (protocol: BOLT_PROTOCOLS, dataType:
 export type UnpackerInternal<T extends any = any> = (protocol: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number, unpacker: UnpackerInternal<T>) => UnpackerReturn<T>;
 export type UnpackerReturn<T> = { finalPos: number, data: T };
 
-export interface IAuth {
+export interface IAuthToken {
     scheme: 'basic',
     principal: string,
     credentials: string;
 }
 
-export interface IConnectionConfig<Data extends any = List<Monad<any>>> {
+export interface IConnectionConfig<Data = any> {
     secure?: true;
-    auth: IAuth;
+    auth: IAuthToken;
     host: string;
     port: number;
     userAgent: string;
@@ -29,11 +27,31 @@ export interface IConnectionConfig<Data extends any = List<Monad<any>>> {
     unpacker?: Unpacker<Data>;
 }
 
-export interface IDriverConfig<Data = Monad<any>,
-    Header = Data,
-    Rec = RecordMonad<Data, Header>> {
+export interface IDriverConfig<Rec = any> {
     maxPoolSize: number;
-    connectionConfig: Partial<IConnectionConfig<Data>>; // @todo: Partial is not correct
-    mapToRecordHeader: (headerRecord: Data) => Header;
-    mapToRecord: (headerRecord: Header, data: Data) => Rec;
+    connectionConfig: Partial<IConnectionConfig>; // @todo: Partial is not correct
+    mapToResultHeader: (headerRecord: any) => any;
+    mapToResult: (headerRecord: any, type: DRIVER_RESULT_TYPE, data: any) => Rec;
 }
+
+export interface IServerMessage<Data = any> {
+    header: DRIVER_HEADERS;
+    data: Data;
+}
+
+export interface IClientMessage {
+    cmd: DriverCommand;
+    data: any[];
+    additionalData?: (protocol: BOLT_PROTOCOLS) => any[]
+}
+
+export interface IRequest {
+    id: string;
+    messages: IClientMessage[];
+}
+
+export interface IRunQueryMeta {
+    pullN?: number
+}
+
+export type DriverCommand = DRIVER_QUERY_COMMANDS | DRIVER_TRANSACTION_COMMANDS;

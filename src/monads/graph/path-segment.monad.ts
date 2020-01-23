@@ -9,11 +9,23 @@ export type RawPathSegment = {
 }
 
 export default class PathSegment extends Monad<RawPathSegment> {
+    get start() {
+        return this.original.start;
+    }
+
+    get end() {
+        return this.original.end;
+    }
+
+    get relationship() {
+        return this.original.relationship;
+    }
+
     static isPathSegment(val: any): val is PathSegment {
         return val instanceof PathSegment;
     }
 
-    static of(val: any) {
+    static of(val: any): PathSegment {
         const sane = {
             start: NodeMonad.from(val.start),
             relationship: Relationship.from(val.relationship),
@@ -23,21 +35,9 @@ export default class PathSegment extends Monad<RawPathSegment> {
         return new PathSegment(sane);
     }
 
-    static from(val: any) {
-        return val instanceof PathSegment
+    static from(val: any): PathSegment {
+        return PathSegment.isPathSegment(val)
             ? val
             : PathSegment.of(val);
-    }
-
-    getStart() {
-        return this.original.start;
-    }
-
-    getEnd() {
-        return this.original.end;
-    }
-
-    getRelationship() {
-        return this.original.relationship;
     }
 }

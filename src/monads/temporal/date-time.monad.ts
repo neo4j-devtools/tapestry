@@ -25,11 +25,51 @@ export interface RawDateTime {
 }
 
 export default class DateTime extends Monad<RawDateTime> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get year() {
+        return this.original.year;
+    }
+
+    get month() {
+        return this.original.month;
+    }
+
+    get day() {
+        return this.original.day;
+    }
+
+    get hour() {
+        return this.original.hour;
+    }
+
+    get minute() {
+        return this.original.minute;
+    }
+
+    get second() {
+        return this.original.second;
+    }
+
+    get nanosecond() {
+        return this.original.nanosecond;
+    }
+
+    get timeZoneOffsetSeconds() {
+        return this.original.timeZoneOffsetSeconds;
+    }
+
+    get timeZoneId() {
+        return this.original.timeZoneId;
+    }
+
     static isDateTime(val: any): val is DateTime {
         return val instanceof DateTime;
     }
 
-    static of(val: any) {
+    static of(val: any): DateTime {
         // @todo: improve typechecks
         const sane: RawDateTime = {
             year: Num.fromValue(val.year),
@@ -54,13 +94,13 @@ export default class DateTime extends Monad<RawDateTime> {
         return new DateTime(sane);
     }
 
-    static from(val: any) {
-        return val instanceof DateTime
+    static from(val: any): DateTime {
+        return DateTime.isDateTime(val)
             ? val
             : DateTime.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: Num, timeZoneId?: Str) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num, timeZoneId?: Str): DateTime {
         return DateTime.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -71,14 +111,14 @@ export default class DateTime extends Monad<RawDateTime> {
             nanosecond: totalNanoseconds(standardDate, nanosecond),
             timeZoneOffsetSeconds: timeZoneOffsetInSeconds(standardDate),
             timeZoneId: Maybe.of(
-                timeZoneId && !timeZoneId.isEmpty()
+                timeZoneId && !timeZoneId.isEmpty
                     ? timeZoneId
                     : None.EMPTY
             )
         });
     }
 
-    static fromMessage(seconds: Num = Num.of(0), nanoseconds: Num = Num.of(0)) {
+    static fromMessage(seconds: Num = Num.ZERO, nanoseconds: Num = Num.ZERO): DateTime {
         return seconds.flatMap((secs) => DateTime.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
             nanoseconds,
@@ -86,59 +126,19 @@ export default class DateTime extends Monad<RawDateTime> {
         ));
     }
 
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    getYear() {
-        return this.original.year;
-    }
-
-    getMonth() {
-        return this.original.month;
-    }
-
-    getDay() {
-        return this.original.day;
-    }
-
-    getHour() {
-        return this.original.hour;
-    }
-
-    getMinute() {
-        return this.original.minute;
-    }
-
-    getSecond() {
-        return this.original.second;
-    }
-
-    getNanosecond() {
-        return this.original.nanosecond;
-    }
-
-    getTimeZoneOffsetSeconds() {
-        return this.original.timeZoneOffsetSeconds;
-    }
-
-    getTimeZoneId() {
-        return this.original.timeZoneId;
-    }
-
     toString() {
         const localDateTimeStr = localDateTimeToString(
-            this.getYear(),
-            this.getMonth(),
-            this.getDay(),
-            this.getHour(),
-            this.getMinute(),
-            this.getSecond(),
-            this.getNanosecond()
+            this.year,
+            this.month,
+            this.day,
+            this.hour,
+            this.minute,
+            this.second,
+            this.nanosecond
         );
-        const zoneId = this.getTimeZoneId().getOrElse(Str.of(''));
-        const timeZoneOffsetSeconds = this.getTimeZoneOffsetSeconds().getOrElse(Num.of(0));
-        const timeZoneStr = !zoneId.isEmpty()
+        const zoneId = this.timeZoneId.getOrElse(Str.of(''));
+        const timeZoneOffsetSeconds = this.timeZoneOffsetSeconds.getOrElse(Num.ZERO);
+        const timeZoneStr = !zoneId.isEmpty
             ? zoneId.map((zone) => `[${zone}]`).get()
             : timeZoneOffsetToIsoString(timeZoneOffsetSeconds.get());
 

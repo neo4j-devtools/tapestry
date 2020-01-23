@@ -24,6 +24,40 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
         this.ourLength = Num.of(val.length);
     }
 
+    get isEmpty(): boolean {
+        return this.ourLength.equals(Num.ZERO);
+    }
+
+    get length(): Num {
+        return this.ourLength;
+    }
+
+    get first(): Maybe<T> {
+        if (this.ourFirst) {
+            return this.ourFirst;
+        }
+
+        const it = this[Symbol.iterator]();
+
+        // @ts-ignore
+        this.ourFirst = Maybe.of(it.next().value);
+
+        return this.ourFirst!;
+    }
+
+    get last(): Maybe<T> {
+        if (this.ourLast) {
+            return this.ourLast;
+        }
+
+        const arr = [...this].reverse();
+
+        // @ts-ignore
+        this.ourLast = Maybe.of(arr[0]);
+
+        return this.ourLast!;
+    }
+
     static isList<T extends Monad<any> = Monad<any>>(val: any): val is List<T> {
         return val instanceof List;
     }
@@ -37,7 +71,7 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
     }
 
     static from<T extends Monad<any> = Monad<any>>(val: any): List<T> {
-        return val instanceof List
+        return List.isList<T>(val)
             ? val
             : List.of(val);
     }
@@ -49,50 +83,16 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
         }
     }
 
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
     hasIndex(index: Num | number): boolean {
         const numToUse = Num.fromValue(index);
 
-        return numToUse.greaterThanOrEqual(0) && numToUse.lessThan(this.original.length);
+        return numToUse.greaterThanOrEqual(Num.ZERO) && numToUse.lessThan(this.original.length);
     }
 
     getIndex(index: Num | number): Maybe<T> {
         const numToUse = Num.fromValue(index);
 
         return Maybe.of(this.original[numToUse.get()]);
-    }
-
-    getLength(): Num {
-        return this.ourLength;
-    }
-
-    first(): Maybe<T> {
-        if (this.ourFirst) {
-            return this.ourFirst;
-        }
-
-        const it = this[Symbol.iterator]();
-
-        // @ts-ignore
-        this.ourFirst = Maybe.of(it.next().value);
-
-        return this.ourFirst!;
-    }
-
-    last(): Maybe<T> {
-        if (this.ourLast) {
-            return this.ourLast;
-        }
-
-        const arr = [...this].reverse();
-
-        // @ts-ignore
-        this.ourLast = Maybe.of(arr[0]);
-
-        return this.ourLast!;
     }
 
     slice<O extends Monad<any> = T>(from: Num | number, to?: Num | number): List<O> {

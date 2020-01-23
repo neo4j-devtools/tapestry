@@ -1,21 +1,34 @@
-import {
-    BOLT_PROTOCOLS,
-    BOLT_RESPONSE_DATA_TYPES,
-    UnpackerReturn,
-    unpackerV1,
-    unwindList
-} from './index';
+import {reduce} from 'lodash';
 
-export function JSONUnpackerV1(protocol: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number): UnpackerReturn<any> {
+import {UnpackerReturn} from '../../types';
+
+import {BOLT_PROTOCOLS} from '../../connection';
+import {BOLT_RESPONSE_DATA_TYPES} from './unpacker.constants';
+import {unpackerV1} from './unpacker.v1';
+import {unwindList} from './unpacker.utils';
+
+
+export function JsonUnpacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number): UnpackerReturn<any> {
     switch (dataType) {
         case BOLT_RESPONSE_DATA_TYPES.STRUCT: {
-            const {finalPos, data: fields} = unpackerV1(protocol, dataType, view, size, pos, JSONUnpackerV1);
+            const {finalPos, data: fields} = unpackerV1(protocol, dataType, view, size, pos, JsonUnpacker);
 
             return {finalPos, data: tryGetStructShape(fields.getOrElse([]))}
         }
 
+        case BOLT_RESPONSE_DATA_TYPES.MAP: {
+            const {finalPos, data: map} = unpackerV1(protocol, dataType, view, size, pos, JsonUnpacker);
+            const asObj = reduce([...map], (agg, [key, val]) => ({
+                ...agg,
+                [key]: val
+            }), {});
+
+            return {finalPos, data: asObj};
+        }
+
+
         default: {
-            const {finalPos, data} = unpackerV1(protocol, dataType, view, size, pos, JSONUnpackerV1);
+            const {finalPos, data} = unpackerV1(protocol, dataType, view, size, pos, JsonUnpacker);
 
             return {finalPos, data: data.get()}
         }

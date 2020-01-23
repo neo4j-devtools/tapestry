@@ -30,4 +30,4 @@ export {default as Duration} from './temporal/duration.monad';
 export {default as Point} from './spatial/point.monad';
 
 // Driver
-export {default as RecordMonad} from './driver/record.monad';
+export {default as Result} from './driver/result.monad';

@@ -1,4 +1,4 @@
-import {entries, map, join} from 'lodash';
+import {entries, join, map} from 'lodash';
 
 import Monad from '../monad';
 import {arrayHasItems} from '../../utils/array.utils';
@@ -17,30 +17,30 @@ export default class Dict<T = Monad<any>> extends Monad<RawDict<T>> {
         this.keys = Object.freeze(map([...val.keys()], Str.of));
     }
 
-    static isDict(val: any): val is Dict {
+    get isEmpty(): boolean {
+        return arrayHasItems(this.keys);
+    }
+
+    static isDict<T = Monad<any>>(val: any): val is Dict<T> {
         return val instanceof Dict;
     }
 
-    static of(val: any) {
-        const sane: [string, Monad<any>][] = Array.isArray(val)
+    static of<T = Monad<any>>(val: any): Dict<T> {
+        const sane: [string, T][] = Array.isArray(val)
             ? val
             : entries(val);
 
-        return new Dict(new Map(sane));
+        return new Dict<T>(new Map(sane));
     }
 
-    static from(val: any) {
-        return val instanceof Dict
+    static from<T = Monad<any>>(val: any): Dict<T> {
+        return Dict.isDict<T>(val)
             ? val
-            : Dict.of(val);
+            : Dict.of<T>(val);
     }
 
-    static fromObject(obj: object) {
-        return Dict.of(obj);
-    }
-
-    isEmpty(): boolean {
-        return arrayHasItems(this.keys);
+    static fromObject<T = Monad<any>>(obj: object) {
+        return Dict.of<T>(obj);
     }
 
     hasKey(index: number): boolean {

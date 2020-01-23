@@ -1,5 +1,11 @@
 import {IConnectionConfig, IDriverConfig} from '../types';
-import {List, Num, RecordMonad} from '../monads';
+import {List, Num, Result} from '../monads';
+
+export enum DRIVER_RESULT_TYPE {
+    HEADER = 'HEADER',
+    RECORD = 'RECORD',
+    SUMMARY = 'FOOTER',
+}
 
 export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
     auth: {
@@ -11,7 +17,7 @@ export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
     port: 7687,
     userAgent: `tapestry/${'1.0.0'}`,
     getResponseHeader(unpacked: List<Num>) {
-        const header = unpacked.first().getOrElse(Num.of(DRIVER_HEADERS.FAILURE));
+        const header = unpacked.first.getOrElse(Num.of(DRIVER_HEADERS.FAILURE));
 
         switch (header.get()) {
             case DRIVER_HEADERS.SUCCESS:
@@ -33,14 +39,20 @@ export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
 export const DEFAULT_DRIVER_CONFIG: IDriverConfig = {
     maxPoolSize: 1,
     connectionConfig: DEFAULT_CONNECTION_CONFIG,
-    mapToRecordHeader: (data: any) => data,
-    mapToRecord: (headerRecord: any, data: any) => RecordMonad.of({header: headerRecord, data})
+    mapToResultHeader: (data: any) => data,
+    mapToResult: (headerRecord: any, type: any, data: any) => Result.of({header: headerRecord, type, data: List.from(data)})
 };
 
-export enum DRIVER_COMMANDS {
-    INIT = 'INIT',
+export enum DRIVER_TRANSACTION_COMMANDS {
+    BEGIN = 'BEGIN',
+    COMMIT = 'COMMIT',
+    ROLLBACK = 'ROLLBACK',
+}
+
+export enum DRIVER_QUERY_COMMANDS {
+    HELLO = 'HELLO',
     RUN = 'RUN',
-    PULL_ALL = 'PULL_ALL',
+    PULL = 'PULL'
 }
 
 export enum DRIVER_HEADERS {

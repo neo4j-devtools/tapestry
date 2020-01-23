@@ -5,6 +5,10 @@ export default class Str extends Monad<string> {
         super(value);
     }
 
+    get isEmpty() {
+        return typeof this.original !== 'string' || this.original.length === 0;
+    }
+
     static isStr(val: any): val is Str {
         return val instanceof Str;
     }
@@ -17,9 +21,5 @@ export default class Str extends Monad<string> {
         return val instanceof Str
             ? val
             : Str.of(val);
-    }
-
-    isEmpty() {
-        return typeof this.original !== 'string' || this.original.length === 0;
     }
 }

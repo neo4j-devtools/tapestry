@@ -21,7 +21,7 @@ import {
     UnboundRelationship
 } from '../../monads';
 import {BOLT_RESPONSE_DATA_TYPES, NUMBER_TYPES} from './unpacker.constants';
-import {BOLT_PROTOCOLS} from '../../connection/connection.constants';
+import {BOLT_PROTOCOLS} from '../../connection';
 import {
     readUint16,
     readUint32,
@@ -285,7 +285,7 @@ function unpackStructure(view: DataView, size: number, pos: number, unpacker: Un
 
 function tryGetStructMonad(struct: List): Monad<any> {
     // @todo: could be optimised
-    const firstBytes = struct.first().getOrElse(Num.of(0));
+    const firstBytes = struct.first.getOrElse(Num.ZERO);
     const rest: List<any> = struct.slice(1);
 
     switch (firstBytes.getOrElse(0)) {
@@ -344,11 +344,11 @@ function tryGetStructMonad(struct: List): Monad<any> {
 type PathParam = [List<NodeMonad>, List<UnboundRelationship>, List<Num>];
 
 function mapListToPath(list: List): Path {
-    // @todo: typings and no desctructuring
+    // @todo: typings and no destructuring
     let [nodes, relations, sequence] = <PathParam>[...list];
-    const noSequences = sequence.getLength().getOrElse(0);
+    const noSequences = sequence.length.getOrElse(0);
     const segments: PathSegment[] = [];
-    let start: NodeMonad = nodes.first().getOrElse(NodeMonad.EMPTY);
+    let start: NodeMonad = nodes.first.getOrElse(NodeMonad.EMPTY);
     let last: NodeMonad = start;
 
     for (let index = 0; index < noSequences; index += 2) {
@@ -366,12 +366,12 @@ function mapListToPath(list: List): Path {
         // @todo: so many questions...
         const rel = relIndex.greaterThan(0)
             ? relations.getIndex(relIndex.subtract(1)).getOrElse(UnboundRelationship.EMPTY)
-            : relations.getIndex(relIndex.add(relations.getLength())).getOrElse(UnboundRelationship.EMPTY);
+            : relations.getIndex(relIndex.add(relations.length)).getOrElse(UnboundRelationship.EMPTY);
 
         segments.push(PathSegment.of({
             start,
             relationship: UnboundRelationship.isUnboundRelationship(rel)
-                ? rel.bind(start.getIdentity(), end.getIdentity())
+                ? rel.bind(start.identity, end.identity)
                 : rel,
             end
         }));

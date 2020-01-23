@@ -11,11 +11,27 @@ export interface RawDate {
 }
 
 export default class DateMonad extends Monad<RawDate> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get year() {
+        return this.original.year;
+    }
+
+    get month() {
+        return this.original.month;
+    }
+
+    get day() {
+        return this.original.day;
+    }
+
     static isDateMonad(val: any): val is DateMonad {
         return val instanceof DateMonad;
     }
 
-    static of(val: any) {
+    static of(val: any): DateMonad {
         // @todo: improve typechecks
         const sane: RawDate = {
             year: Num.fromValue(val.year),
@@ -26,13 +42,13 @@ export default class DateMonad extends Monad<RawDate> {
         return new DateMonad(sane);
     }
 
-    static from(val: any) {
-        return val instanceof DateMonad
+    static from(val: any): DateMonad {
+        return DateMonad.isDateMonad(val)
             ? val
             : DateMonad.of(val);
     }
 
-    static fromStandardDate(standardDate: Date) {
+    static fromStandardDate(standardDate: Date): DateMonad {
         return DateMonad.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -40,27 +56,11 @@ export default class DateMonad extends Monad<RawDate> {
         });
     }
 
-    static fromMessage(days: Num = Num.of(0)) {
+    static fromMessage(days: Num = Num.ZERO): DateMonad {
         return days.flatMap((no) => DateMonad.fromStandardDate(moment(0).add(no, 'days').toDate()));
     }
 
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    getYear() {
-        return this.original.year;
-    }
-
-    getMonth() {
-        return this.original.month;
-    }
-
-    getDay() {
-        return this.original.day;
-    }
-
     toString() {
-        return `${dateToIsoString(this.getYear(), this.getMonth(), this.getDay())}`;
+        return `${dateToIsoString(this.year, this.month, this.day)}`;
     }
 }

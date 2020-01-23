@@ -14,11 +14,39 @@ export interface RawRelationship {
 export default class Relationship extends Monad<RawRelationship> {
     static EMPTY = Relationship.of({});
 
+    get isEmpty() {
+        return false;
+    }
+
+    get hasProperties() {
+        return !this.original.properties.isEmpty;
+    }
+
+    get identity() {
+        return this.original.identity;
+    }
+
+    get type() {
+        return this.original.type;
+    }
+
+    get start() {
+        return this.original.start;
+    }
+
+    get end() {
+        return this.original.end;
+    }
+
+    get properties() {
+        return this.original.properties;
+    }
+
     static isRelationship(val: any): val is Relationship {
         return val instanceof Relationship;
     }
 
-    static of(val: any) {
+    static of(val: any): Relationship {
         // @todo: improve typechecks
         const sane: RawRelationship = {
             identity: Num.fromValue(val.identity),
@@ -31,50 +59,21 @@ export default class Relationship extends Monad<RawRelationship> {
         return new Relationship(sane);
     }
 
-    static from(val: any) {
-        return val instanceof Relationship
+    static from(val: any): Relationship {
+        return Relationship.isRelationship(val)
             ? val
             : Relationship.of(val);
     }
 
-    isEmpty(): boolean {
-        return this.getIdentity().equals(0);
-    }
-
-    hasProperties() {
-        return !this.original.properties.isEmpty();
-    }
-
-    getIdentity() {
-        return this.original.identity;
-    }
-
-    getType() {
-        return this.original.type;
-    }
-
-    getStart() {
-        return this.original.start;
-    }
-
-    getEnd() {
-        return this.original.end;
-    }
-
-    getProperties() {
-        return this.original.properties;
-    }
-
     toString() {
-        const value = this.original;
-        let s = '(' + value.start + ')-[:' + value.type;
+        let s = '(' + this.start + ')-[:' + this.type;
 
-        if (this.hasProperties()) {
+        if (this.hasProperties) {
             s += ' {';
 
             let first = true;
 
-            for (const [key, val] of value.properties) {
+            for (const [key, val] of this.properties) {
                 if (!first) {
                     s += ',';
                 }
@@ -86,7 +85,7 @@ export default class Relationship extends Monad<RawRelationship> {
             s += '}';
         }
 
-        s += ']->(' + value.end + ')';
+        s += ']->(' + this.end + ')';
 
         return `${this.constructor.name} {${s}}`;
     }

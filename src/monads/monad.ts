@@ -1,11 +1,11 @@
 export interface IMonad<T> extends Iterable<T> {
+    isEmpty: boolean;
+
     equals(other: IMonad<any>): boolean;
 
     get(): T | undefined;
 
     getOrElse(other: T): T;
-
-    isEmpty(): boolean;
 
     toString(formatter?: (val: T) => string): string
 
@@ -20,11 +20,15 @@ export default class Monad<T extends any> implements IMonad<T> {
 
     constructor(protected readonly original: T) {
         // @ts-ignore
-        this.alreadyIterable = original != null && typeof original[Symbol.iterator] === 'function';
+        this.alreadyIterable = original != null && typeof original !== "string" && typeof original[Symbol.iterator] === 'function';
         // @ts-ignore
         this.iterableValue = this.alreadyIterable
             ? original
             : [original];
+    }
+
+    get isEmpty() {
+        return this.original == null;
     }
 
     static isMonad<T extends any>(val: any): val is Monad<T> {
@@ -47,16 +51,12 @@ export default class Monad<T extends any> implements IMonad<T> {
         }
     }
 
-    isEmpty() {
-        return this.original == null;
-    }
-
     get() {
         return this.original;
     }
 
     getOrElse(other: T): T {
-        return this.isEmpty()
+        return this.isEmpty
             ? other
             : this.get();
     }
@@ -80,5 +80,9 @@ export default class Monad<T extends any> implements IMonad<T> {
 
     toString() {
         return `${this.original}`;
+    }
+
+    valueOf() {
+        return this.original;
     }
 }

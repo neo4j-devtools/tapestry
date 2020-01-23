@@ -96,12 +96,12 @@ export function fromNumToString(val: Num, radix: number = DEFAULT_NUM_RADIX) {
         throw RangeError('radix out of range: ' + radix);
     }
 
-    if (val.isZero()) {
+    if (val.isZero) {
         return '0';
     }
 
     let rem;
-    if (val.isNegative()) {
+    if (val.isNegative) {
         if (val.equals(Num.MIN_VALUE)) {
             // We need to change the Num value before it can be negated, so we remove
             // the bottom-most digit in val base and then recurse to do the rest.
@@ -124,7 +124,7 @@ export function fromNumToString(val: Num, radix: number = DEFAULT_NUM_RADIX) {
         const intval = rem.subtract(remDiv.multiply(radixToPower)).toInt() >>> 0;
         let digits = intval.toString(radix);
         rem = remDiv;
-        if (rem.isZero()) {
+        if (rem.isZero) {
             return digits + result;
         } else {
             while (digits.length < 6) {
@@ -137,15 +137,15 @@ export function fromNumToString(val: Num, radix: number = DEFAULT_NUM_RADIX) {
 
 export function addNums(right: Num, left: Num) {
     // Divide each number into 4 chunks of 16 bits, and then sum the chunks.
-    let a48 = right.getHigh() >>> 16;
-    let a32 = right.getHigh() & 0xffff;
-    let a16 = right.getLow() >>> 16;
-    let a00 = right.getLow() & 0xffff;
+    let a48 = right.high >>> 16;
+    let a32 = right.high & 0xffff;
+    let a16 = right.low >>> 16;
+    let a00 = right.low & 0xffff;
 
-    let b48 = left.getHigh() >>> 16;
-    let b32 = left.getHigh() & 0xffff;
-    let b16 = left.getLow() >>> 16;
-    let b00 = left.getLow() & 0xffff;
+    let b48 = left.high >>> 16;
+    let b32 = left.high & 0xffff;
+    let b16 = left.low >>> 16;
+    let b00 = left.low & 0xffff;
 
     let c48 = 0;
     let c32 = 0;
@@ -168,31 +168,31 @@ export function addNums(right: Num, left: Num) {
 }
 
 export function multiplyNum(right: Num, multiplier: Num): Num {
-    if (right.isZero()) {
+    if (right.isZero) {
         return Num.ZERO;
     }
 
-    if (multiplier.isZero()) {
+    if (multiplier.isZero) {
         return Num.ZERO;
     }
 
     if (right.equals(Num.MIN_VALUE)) {
-        return multiplier.isOdd() ? Num.MIN_VALUE : Num.ZERO;
+        return multiplier.isOdd ? Num.MIN_VALUE : Num.ZERO;
     }
 
     if (multiplier.equals(Num.MIN_VALUE)) {
-        return right.isOdd() ? Num.MIN_VALUE : Num.ZERO;
+        return right.isOdd ? Num.MIN_VALUE : Num.ZERO;
     }
 
-    if (right.isNegative()) {
-        if (multiplier.isNegative()) {
+    if (right.isNegative) {
+        if (multiplier.isNegative) {
             return right.negate().multiply(multiplier.negate());
         } else {
             return right.negate()
                 .multiply(multiplier)
                 .negate();
         }
-    } else if (multiplier.isNegative()) {
+    } else if (multiplier.isNegative) {
         return right.multiply(multiplier.negate()).negate();
     }
 
@@ -204,15 +204,15 @@ export function multiplyNum(right: Num, multiplier: Num): Num {
     // Divide each long into 4 chunks of 16 bits, and then add up 4x4 products.
     // We can skip products that would overflow.
 
-    let a48 = right.getHigh() >>> 16;
-    let a32 = right.getHigh() & 0xffff;
-    let a16 = right.getLow() >>> 16;
-    let a00 = right.getLow() & 0xffff;
+    let a48 = right.high >>> 16;
+    let a32 = right.high & 0xffff;
+    let a16 = right.low >>> 16;
+    let a00 = right.low & 0xffff;
 
-    let b48 = multiplier.getHigh() >>> 16;
-    let b32 = multiplier.getHigh() & 0xffff;
-    let b16 = multiplier.getLow() >>> 16;
-    let b00 = multiplier.getLow() & 0xffff;
+    let b48 = multiplier.high >>> 16;
+    let b32 = multiplier.high & 0xffff;
+    let b16 = multiplier.low >>> 16;
+    let b00 = multiplier.low & 0xffff;
 
     let c48 = 0;
     let c32 = 0;
@@ -248,8 +248,8 @@ export function compareNums(right: Num, left: Num) {
         return 0;
     }
 
-    const rightNeg = right.isNegative();
-    const leftNeg = left.isNegative();
+    const rightNeg = right.isNegative;
+    const leftNeg = left.isNegative;
 
     if (rightNeg && !leftNeg) {
         return -1;
@@ -260,15 +260,15 @@ export function compareNums(right: Num, left: Num) {
     }
 
     // At right point the sign bits are the same
-    return right.subtract(left).isNegative() ? -1 : 1;
+    return right.subtract(left).isNegative ? -1 : 1;
 }
 
 export function divideNums(val: Num, divisor: Num): Num {
-    if (divisor.isZero()) {
+    if (divisor.isZero) {
         throw new SyntaxError('division by zero');
     }
 
-    if (val.isZero()) {
+    if (val.isZero) {
         return Num.ZERO;
     }
 
@@ -291,7 +291,7 @@ export function divideNums(val: Num, divisor: Num): Num {
         approx = halfThis.divide(divisor).shiftLeft(1);
 
         if (approx.equals(Num.ZERO)) {
-            return divisor.isNegative() ? Num.ONE : Num.NEG_ONE;
+            return divisor.isNegative ? Num.ONE : Num.NEG_ONE;
         }
 
         rem = val.subtract(divisor.multiply(approx));
@@ -303,8 +303,8 @@ export function divideNums(val: Num, divisor: Num): Num {
         return Num.ZERO;
     }
 
-    if (val.isNegative()) {
-        if (divisor.isNegative()) {
+    if (val.isNegative) {
+        if (divisor.isNegative) {
             return val.negate().divide(divisor.negate());
         }
 
@@ -313,7 +313,7 @@ export function divideNums(val: Num, divisor: Num): Num {
             .negate();
     }
 
-    if (divisor.isNegative()) {
+    if (divisor.isNegative) {
         return val.divide(divisor.negate()).negate();
     }
 
@@ -340,7 +340,7 @@ export function divideNums(val: Num, divisor: Num): Num {
         let approxRes = Num.fromNumber(approx);
         let approxRem = approxRes.multiply(divisor);
 
-        while (approxRem.isNegative() || approxRem.greaterThan(rem)) {
+        while (approxRem.isNegative || approxRem.greaterThan(rem)) {
             approx -= delta;
             approxRes = Num.fromNumber(approx);
             approxRem = approxRes.multiply(divisor);
@@ -348,7 +348,7 @@ export function divideNums(val: Num, divisor: Num): Num {
 
         // We know the answer can't be zero... and actually, zero would cause
         // infinite recursion since we would make no progress.
-        if (approxRes.isZero()) {
+        if (approxRes.isZero) {
             approxRes = Num.ONE;
         }
 
@@ -369,12 +369,12 @@ export function shiftNumLeft(val: Num, numberOfBits: Num) {
 
     if (numBitsAsInt < 32) {
         return Num.fromBits(
-            val.getLow() << numBitsAsInt,
-            (val.getHigh() << numBitsAsInt) | (val.getLow() >>> (32 - numBitsAsInt))
+            val.low << numBitsAsInt,
+            (val.high << numBitsAsInt) | (val.low >>> (32 - numBitsAsInt))
         );
     }
 
-    return Num.fromBits(0, val.getLow() << (numBitsAsInt - 32));
+    return Num.fromBits(0, val.low << (numBitsAsInt - 32));
 }
 
 export function shiftNumRight(val: Num, numberOfBits: Num) {
@@ -387,13 +387,13 @@ export function shiftNumRight(val: Num, numberOfBits: Num) {
 
     if (numBitsAsInt < 32) {
         return Num.fromBits(
-            (val.getLow() >>> numBitsAsInt) | (val.getHigh() << (32 - numBitsAsInt)),
-            val.getHigh() >> numBitsAsInt
+            (val.low >>> numBitsAsInt) | (val.high << (32 - numBitsAsInt)),
+            val.high >> numBitsAsInt
         );
     }
 
     return Num.fromBits(
-        val.getHigh() >> (numBitsAsInt - 32),
-        val.getHigh() >= 0 ? 0 : -1
+        val.high >> (numBitsAsInt - 32),
+        val.high >= 0 ? 0 : -1
     );
 }

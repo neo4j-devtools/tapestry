@@ -11,11 +11,31 @@ export interface RawLocalTime {
 }
 
 export default class LocalTime extends Monad<RawLocalTime> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get hour() {
+        return this.original.hour;
+    }
+
+    get minute() {
+        return this.original.minute;
+    }
+
+    get second() {
+        return this.original.second;
+    }
+
+    get nanosecond() {
+        return this.original.nanosecond;
+    }
+
     static isLocalTime(val: any): val is LocalTime {
         return val instanceof LocalTime;
     }
 
-    static of(val: any) {
+    static of(val: any): LocalTime {
         // @todo: improve typechecks
         const sane: RawLocalTime = {
             hour: Num.fromValue(val.hour),
@@ -27,8 +47,8 @@ export default class LocalTime extends Monad<RawLocalTime> {
         return new LocalTime(sane);
     }
 
-    static from(val: any) {
-        return val instanceof LocalTime
+    static from(val: any): LocalTime {
+        return LocalTime.isLocalTime(val)
             ? val
             : LocalTime.of(val);
     }
@@ -40,7 +60,7 @@ export default class LocalTime extends Monad<RawLocalTime> {
      * @param {Integer|number|undefined} nanosecond - The optional amount of nanoseconds.
      * @return {LocalTime} New LocalTime.
      */
-    static fromStandardDate(standardDate: Date, nanosecond: Num) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num): LocalTime {
         return LocalTime.of({
             hour: standardDate.getHours(),
             minute: standardDate.getMinutes(),
@@ -49,39 +69,19 @@ export default class LocalTime extends Monad<RawLocalTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.of(0)) {
+    static fromMessage(seconds: Num = Num.ZERO): LocalTime {
         return seconds.divide(1000000000).flatMap((secs) => LocalTime.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
-            Num.of(0) // @todo: more
+            Num.ZERO // @todo: more
         ));
-    }
-
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    getHour() {
-        return this.original.hour;
-    }
-
-    getMinute() {
-        return this.original.minute;
-    }
-
-    getSecond() {
-        return this.original.second;
-    }
-
-    getNanosecond() {
-        return this.original.nanosecond;
     }
 
     toString() {
         return timeToIsoString(
-            this.original.hour,
-            this.original.minute,
-            this.original.second,
-            this.original.nanosecond
+            this.hour,
+            this.minute,
+            this.second,
+            this.nanosecond
         );
     }
 }

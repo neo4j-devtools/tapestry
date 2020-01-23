@@ -1,4 +1,5 @@
 import Num from '../primitive/num/num.monad';
+import {boundMethod} from 'autobind-decorator';
 
 export class ValueRange {
     protected readonly minNum: Num;
@@ -9,6 +10,7 @@ export class ValueRange {
         this.maxNum = Num.of(max);
     }
 
+    @boundMethod
     contains(value: number | Num) {
         const valToUse = Num.isNum(value)
             ? value
@@ -20,22 +22,27 @@ export class ValueRange {
         );
     }
 
+    @boundMethod
     getMinNum() {
         return this.minNum;
     }
 
+    @boundMethod
     getMaxNum() {
         return this.maxNum;
     }
 
+    @boundMethod
     getMin() {
         return this.min;
     }
 
+    @boundMethod
     getMax() {
         return this.max;
     }
 
+    @boundMethod
     toString() {
         return `[${this.getMin()}, ${this.getMax()}]`;
     }

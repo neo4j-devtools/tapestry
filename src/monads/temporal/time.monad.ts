@@ -1,7 +1,13 @@
+import moment from 'moment';
+
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
-import {timeToIsoString, timeZoneOffsetToIsoString, totalNanoseconds, timeZoneOffsetInSeconds} from '../../utils/temporal.utils';
-import moment from 'moment';
+import {
+    timeToIsoString,
+    timeZoneOffsetInSeconds,
+    timeZoneOffsetToIsoString,
+    totalNanoseconds
+} from '../../utils/temporal.utils';
 
 export interface RawTime {
     hour: Num;
@@ -12,11 +18,35 @@ export interface RawTime {
 }
 
 export default class TimeMonad extends Monad<RawTime> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get hour() {
+        return this.original.hour;
+    }
+
+    get minute() {
+        return this.original.minute;
+    }
+
+    get second() {
+        return this.original.second;
+    }
+
+    get nanosecond() {
+        return this.original.nanosecond;
+    }
+
+    get timeZoneOffsetSeconds() {
+        return this.original.timeZoneOffsetSeconds;
+    }
+
     static isTimeMonad(val: any): val is TimeMonad {
         return val instanceof TimeMonad;
     }
 
-    static of(val: any) {
+    static of(val: any): TimeMonad {
         // @todo: improve typechecks
         const sane: RawTime = {
             hour: Num.fromValue(val.hour),
@@ -29,13 +59,13 @@ export default class TimeMonad extends Monad<RawTime> {
         return new TimeMonad(sane);
     }
 
-    static from(val: any) {
+    static from(val: any): TimeMonad {
         return val instanceof TimeMonad
             ? val
             : TimeMonad.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: Num) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num): TimeMonad {
         return TimeMonad.of({
             hour: standardDate.getHours(),
             minute: standardDate.getMinutes(),
@@ -45,45 +75,21 @@ export default class TimeMonad extends Monad<RawTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.of(0)) {
+    static fromMessage(seconds: Num = Num.ZERO): TimeMonad {
         return seconds.divide(1000000000).flatMap((secs) => TimeMonad.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
-            Num.of(0) // @todo: more
+            Num.ZERO // @todo: more
         ));
-    }
-
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    getHour() {
-        return this.original.hour;
-    }
-
-    getMinute() {
-        return this.original.minute;
-    }
-
-    getSecond() {
-        return this.original.second;
-    }
-
-    getNanosecond() {
-        return this.original.nanosecond;
-    }
-
-    getTimeZoneOffsetSeconds() {
-        return this.original.timeZoneOffsetSeconds;
     }
 
     toString() {
         return (
             timeToIsoString(
-                this.getHour(),
-                this.getMinute(),
-                this.getSecond(),
-                this.getNanosecond()
-            ) + timeZoneOffsetToIsoString(this.getTimeZoneOffsetSeconds())
+                this.hour,
+                this.minute,
+                this.second,
+                this.nanosecond
+            ) + timeZoneOffsetToIsoString(this.timeZoneOffsetSeconds)
         );
     }
 }

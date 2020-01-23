@@ -7,6 +7,10 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
         super(val);
     }
 
+    get isEmpty() {
+        return None.isNone(this.original);
+    }
+
     static isMaybe<T = Monad<any>>(val: any): val is Maybe<T> {
         return val instanceof Maybe;
     }
@@ -28,10 +32,6 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
     getOrElse(other: T): T {
         // @ts-ignore
         return super.getOrElse(other);
-    }
-
-    isEmpty() {
-        return None.isNone(this.original);
     }
 
     toString(): string {

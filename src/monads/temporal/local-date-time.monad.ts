@@ -15,11 +15,43 @@ export interface RawLocalDateTime {
 }
 
 export default class LocalDateTime extends Monad<RawLocalDateTime> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get year() {
+        return this.original.year;
+    }
+
+    get month() {
+        return this.original.month;
+    }
+
+    get day() {
+        return this.original.day;
+    }
+
+    get hour() {
+        return this.original.hour;
+    }
+
+    get minute() {
+        return this.original.minute;
+    }
+
+    get second() {
+        return this.original.second;
+    }
+
+    get nanosecond() {
+        return this.original.nanosecond;
+    }
+
     static isLocalDateTime(val: any): val is LocalDateTime {
         return val instanceof LocalDateTime;
     }
 
-    static of(val: any) {
+    static of(val: any): LocalDateTime {
         // @todo: improve typechecks
         const sane: RawLocalDateTime = {
             year: Num.fromValue(val.year),
@@ -34,13 +66,13 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
         return new LocalDateTime(sane);
     }
 
-    static from(val: any) {
-        return val instanceof LocalDateTime
+    static from(val: any): LocalDateTime {
+        return LocalDateTime.isLocalDateTime(val)
             ? val
             : LocalDateTime.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: Num) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num): LocalDateTime {
         return LocalDateTime.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -52,54 +84,22 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.of(0), nanoseconds: Num = Num.of(0)) {
+    static fromMessage(seconds: Num = Num.ZERO, nanoseconds: Num = Num.ZERO): LocalDateTime {
         return seconds.flatMap((secs) => LocalDateTime.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
             nanoseconds
         ));
     }
 
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    getYear() {
-        return this.original.year;
-    }
-
-    getMonth() {
-        return this.original.month;
-    }
-
-    getDay() {
-        return this.original.day;
-    }
-
-    getHour() {
-        return this.original.hour;
-    }
-
-    getMinute() {
-        return this.original.minute;
-    }
-
-    getSecond() {
-        return this.original.second;
-    }
-
-    getNanosecond() {
-        return this.original.nanosecond;
-    }
-
     toString() {
         return localDateTimeToString(
-            this.getYear(),
-            this.getMonth(),
-            this.getDay(),
-            this.getHour(),
-            this.getMinute(),
-            this.getSecond(),
-            this.getNanosecond()
+            this.year,
+            this.month,
+            this.day,
+            this.hour,
+            this.minute,
+            this.second,
+            this.nanosecond
         );
     }
 }

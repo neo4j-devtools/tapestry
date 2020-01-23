@@ -1,6 +1,6 @@
 import {UnpackerInternal, UnpackerReturn} from '../../types';
 
-import {BOLT_PROTOCOLS} from '../../connection/connection.constants';
+import {BOLT_PROTOCOLS} from '../../connection';
 import {unpackerV1, unpackV1Message} from './unpacker.v1';
 
 export function unpackResponseData<T extends any = any>(protocol: BOLT_PROTOCOLS, view: DataView, unpacker?: UnpackerInternal<T>): UnpackerReturn<T> {

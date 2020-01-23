@@ -14,11 +14,35 @@ export interface RawPoint {
 }
 
 export default class Point extends Monad<RawPoint> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get is2d(): boolean {
+        return None.isNone(this.z);
+    }
+
+    get srid() {
+        return this.original.srid;
+    }
+
+    get x() {
+        return this.original.x;
+    }
+
+    get y() {
+        return this.original.y;
+    }
+
+    get z() {
+        return this.original.z;
+    }
+
     static isPoint(val: any): val is Point {
         return val instanceof Point;
     }
 
-    static of(val: any) {
+    static of(val: any): Point {
         // @todo: improve typechecks
         const sane: RawPoint = {
             srid: Num.fromValue(val.srid),
@@ -35,46 +59,18 @@ export default class Point extends Monad<RawPoint> {
         return new Point(sane);
     }
 
-    static from(val: any) {
-        return val instanceof Point
+    static from(val: any): Point {
+        return Point.isPoint(val)
             ? val
             : Point.of(val);
     }
 
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    is2d(): boolean {
-        return None.isNone(this.getZ());
-    }
-
-    getSrid() {
-        return this.original.srid;
-    }
-
-    getX() {
-        return this.original.x;
-    }
-
-    getY() {
-        return this.original.y;
-    }
-
-    getZ() {
-        return this.original.z;
-    }
-
     toString() {
-        const ourZ = this.getZ();
+        const {x, y, z, srid} = this;
 
-        return ourZ.flatMap((zVal) => Str.of(None.isNone(zVal)
-            ? `Point {srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
-                this.getX()
-            )}, y=${formatAsFloat(this.getY())}}`
-            : `Point {srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
-                this.getX()
-            )}, y=${formatAsFloat(this.getY())}, z=${formatAsFloat(zVal)}}`
+        return z.flatMap((zVal) => Str.of(None.isNone(zVal)
+            ? `Point {srid=${formatAsFloat(srid)}, x=${formatAsFloat(x)}, y=${formatAsFloat(y)}}`
+            : `Point {srid=${formatAsFloat(srid)}, x=${formatAsFloat(x)}, y=${formatAsFloat(y)}, z=${formatAsFloat(zVal)}}`
         )).get();
     }
 }

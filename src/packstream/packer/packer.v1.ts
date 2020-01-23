@@ -2,7 +2,7 @@ import {entries, flatMap, take} from 'lodash';
 
 import {PackerInternal} from '../../types';
 
-import {BOLT_PROTOCOLS} from '../../connection/connection.constants';
+import {BOLT_PROTOCOLS} from '../../connection';
 import {
     BOLT_REQUEST_DATA_TYPE,
     BOOLEAN_FALSE_BYTES,

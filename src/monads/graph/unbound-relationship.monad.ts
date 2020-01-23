@@ -13,11 +13,31 @@ export interface RawUnboundRelationship {
 export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     static EMPTY = UnboundRelationship.of({});
 
+    get isEmpty(): boolean {
+        return false
+    }
+
+    get hasProperties() {
+        return !this.original.properties.isEmpty;
+    }
+
+    get identity() {
+        return this.original.identity;
+    }
+
+    get type() {
+        return this.original.type;
+    }
+
+    get properties() {
+        return this.original.properties;
+    }
+
     static isUnboundRelationship(val: any): val is UnboundRelationship {
         return val instanceof UnboundRelationship;
     }
 
-    static of(val: any) {
+    static of(val: any): UnboundRelationship {
         // @todo: improve typechecks
         const sane: RawUnboundRelationship = {
             identity: Num.fromValue(val.identity),
@@ -28,30 +48,10 @@ export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
         return new UnboundRelationship(sane);
     }
 
-    static from(val: any) {
-        return val instanceof UnboundRelationship
+    static from(val: any): UnboundRelationship {
+        return UnboundRelationship.isUnboundRelationship(val)
             ? val
             : UnboundRelationship.of(val);
-    }
-
-    isEmpty(): boolean {
-        return this.getIdentity().equals(0);
-    }
-
-    hasProperties() {
-        return !this.original.properties.isEmpty();
-    }
-
-    getIdentity() {
-        return this.original.identity;
-    }
-
-    getType() {
-        return this.original.type;
-    }
-
-    getProperties() {
-        return this.original.properties;
     }
 
     bind(start: Num, end: Num) {
@@ -63,14 +63,13 @@ export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     }
 
     toString() {
-        const value = this.original;
-        let s = '-[:' + value.type;
+        let s = '-[:' + this.type;
 
-        if (this.hasProperties()) {
+        if (this.hasProperties) {
             s += ' {';
             let first = true;
 
-            for (const [key, val] of value.properties) {
+            for (const [key, val] of this.properties) {
                 if (!first) {
                     s += ',';
                 }

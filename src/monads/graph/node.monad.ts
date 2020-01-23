@@ -15,11 +15,35 @@ export interface RawNode {
 export default class NodeMonad extends Monad<RawNode> {
     static EMPTY = NodeMonad.of({});
 
-    static isNode(val: any): val is NodeMonad {
+    get isEmpty() {
+        return false;
+    }
+
+    get hasProperties() {
+        return !this.original.properties.isEmpty;
+    }
+
+    get hasLabels() {
+        return arrayHasItems(this.original.labels);
+    }
+
+    get identity() {
+        return this.original.identity;
+    }
+
+    get labels() {
+        return this.original.labels;
+    }
+
+    get properties() {
+        return this.original.properties;
+    }
+
+    static isNodeMonad(val: any): val is NodeMonad {
         return val instanceof NodeMonad;
     }
 
-    static of(val: any) {
+    static of(val: any): NodeMonad {
         // @todo: improve typechecks?
         const sane: RawNode = {
             identity: Num.fromValue(val.identity),
@@ -30,49 +54,24 @@ export default class NodeMonad extends Monad<RawNode> {
         return new NodeMonad(sane);
     }
 
-    static from(val: any) {
-        return val instanceof NodeMonad
+    static from(val: any): NodeMonad {
+        return NodeMonad.isNodeMonad(val)
             ? val
             : NodeMonad.of(val);
     }
 
-    isEmpty(): boolean {
-        return this.getIdentity().equals(0);
-    }
-
-    hasProperties() {
-        return !this.original.properties.isEmpty();
-    }
-
-    hasLabels() {
-        return arrayHasItems(this.original.labels);
-    }
-
-    getIdentity() {
-        return this.original.identity;
-    }
-
-    getLabels() {
-        return this.original.labels;
-    }
-
-    getProperties() {
-        return this.original.properties;
-    }
-
     toString() {
-        const value = this.original;
-        let s = '(' + value.identity;
+        let s = '(' + this.identity;
 
-        for (const label of value.labels) {
+        for (const label of this.labels) {
             s += ':' + label;
         }
 
-        if (this.hasProperties()) {
+        if (this.hasProperties) {
             s += ' {';
 
             let first = true;
-            for (const [key, val] of value.properties) {
+            for (const [key, val] of this.properties) {
                 if (!first) {
                     s += ',';
                 }

@@ -111,13 +111,13 @@ export function epochSecondAndNanoToLocalDateTime(epochSecond: Num | number | st
     const localTime = nanoOfDayToLocalTime(nanoOfDay);
 
     return LocalDateTime.of({
-        year: localDate.getYear(),
-        month: localDate.getMonth(),
-        day: localDate.getDay(),
-        hour: localTime.getHour(),
-        minute: localTime.getMinute(),
-        second: localTime.getSecond(),
-        nanoSecond: localTime.getNanosecond()
+        year: localDate.year,
+        month: localDate.month,
+        day: localDate.day,
+        hour: localTime.hour,
+        minute: localTime.minute,
+        second: localTime.second,
+        nanoSecond: localTime.nanosecond
     });
 }
 
@@ -282,7 +282,7 @@ export function timeZoneOffsetToIsoString(offsetSeconds: Num | number | string) 
         return 'Z';
     }
 
-    const isNegative = offsetSeconds.isNegative();
+    const isNegative = offsetSeconds.isNegative;
 
     if (isNegative) {
         offsetSeconds = offsetSeconds.multiply(-1);
@@ -313,7 +313,7 @@ export function timeZoneOffsetToIsoString(offsetSeconds: Num | number | string) 
  */
 export function dateToIsoString(year: Num | number | string, month: Num | number | string, day: Num | number | string) {
     year = Num.fromValue(year);
-    const isNegative = year.isNegative();
+    const isNegative = year.isNegative;
 
     if (isNegative) {
         year = year.multiply(-1);
@@ -410,7 +410,7 @@ function floorDiv(x: Num | number | string, y: Num | number | string): Num {
 
     let result = x.divide(y);
 
-    if (x.isPositive() !== y.isPositive() && !result.multiply(y).equals(x)) {
+    if (x.isPositive !== y.isPositive && !result.multiply(y).equals(x)) {
         result = result.subtract(1);
     }
 
@@ -441,7 +441,7 @@ function formatSecondsAndNanosecondsForDuration(seconds: Num | number | string, 
     let secondsString;
     let nanosecondsString;
 
-    const secondsNegative = seconds.isNegative();
+    const secondsNegative = seconds.isNegative;
     const nanosecondsGreaterThanZero = nanoseconds.greaterThan(0);
     if (secondsNegative && nanosecondsGreaterThanZero) {
         if (seconds.equals(-1)) {
@@ -488,7 +488,7 @@ function formatNanosecond(value: Num | number | string): string {
  */
 function formatNumber(num: Num | number | string, stringLength?: number) {
     num = Num.fromValue(num);
-    const isNegative = num.isNegative();
+    const isNegative = num.isNegative;
     if (isNegative) {
         num = num.negate();
     }

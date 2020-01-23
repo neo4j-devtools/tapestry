@@ -10,11 +10,31 @@ export interface RawDuration {
 }
 
 export default class Duration extends Monad<RawDuration> {
+    get isEmpty(): boolean {
+        return false; // @todo
+    }
+
+    get months() {
+        return this.original.months;
+    }
+
+    get days() {
+        return this.original.days;
+    }
+
+    get seconds() {
+        return this.original.seconds;
+    }
+
+    get nanoseconds() {
+        return this.original.nanoseconds;
+    }
+
     static isDuration(val: any): val is Duration {
         return val instanceof Duration;
     }
 
-    static of(val: any) {
+    static of(val: any): Duration {
         // @todo: improve typechecks
         const sane: RawDuration = {
             months: Num.fromValue(val.months),
@@ -26,38 +46,18 @@ export default class Duration extends Monad<RawDuration> {
         return new Duration(sane);
     }
 
-    static from(val: any) {
-        return val instanceof Duration
+    static from(val: any): Duration {
+        return Duration.isDuration(val)
             ? val
             : Duration.of(val);
     }
 
-    isEmpty(): boolean {
-        return false; // @todo
-    }
-
-    getMonths() {
-        return this.original.months;
-    }
-
-    getDays() {
-        return this.original.days;
-    }
-
-    getSeconds() {
-        return this.original.seconds;
-    }
-
-    getNanoseconds() {
-        return this.original.nanoseconds;
-    }
-
     toString() {
         return durationToIsoString(
-            this.getMonths(),
-            this.getDays(),
-            this.getSeconds(),
-            this.getNanoseconds()
+            this.months,
+            this.days,
+            this.seconds,
+            this.nanoseconds
         );
     }
 }

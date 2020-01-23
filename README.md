@@ -3,54 +3,140 @@ A neo4j driver spike illustrating an RxJS based monadic driver with full typescr
 
 Help keep the dream alive!
 
+## ToC
+1. [Basic usage](#basic-usage)
+    - [Initialisation](#initialisation)
+    - [Queries](#queries)
+    - [Transactions](#transactions)
+2. [Custom unpackers](#custom-unpackers)
+3. [Configuration](#configuration)
+
+
+## Basic Usage
+### Initialisation
 ```Typescript
-import {Driver} from './client';
-import {Dict, List, Monad, NodeMonad, RecordMonad, Str} from './monads';
-import {filter, flatMap, map, reduce} from 'rxjs/operators';
+import {Driver} from '.';
 
-type Header = Dict<Monad<any>>;
-type Data = List<NodeMonad>;
-type Rec = RecordMonad<Data, Header>;
+const driver = new Driver({
+    connectionConfig: {
+        auth: {
+            scheme: 'basic',
+            principal: 'neo4j',
+            credentials: 'neo4j'
+        }
+    }
+});
+```
 
-const driver = new Driver<Data, Header, Rec>({});
+### Queries
+```Typescript
+import {Driver} from '.';
 
-console.time('runQuery');
-const result = driver.runQuery('MATCH (n) RETURN n LIMIT 100')
-    .pipe(
-        flatMap((record) => record.getData()),
-        map((node) => node.getIdentity()),
-        filter((id) => id.greaterThan(0)),
-        map(Str.of),
-        reduce((agg, next) => agg.concat(next), List.of<Str>([]))
-    ).toPromise();
+const driver = new Driver({});
 
-result.then((res) => {
-    console.log('runQuery', `${res}`);
-    console.timeEnd('runQuery');
+// Reactive
+driver.query('RETURN $foo', {foo: true}).subscribe({
+    next: console.log,
+    complete: driver.shutDown,
+    error: driver.shutDown
+})
+
+// Promise
+driver.query('RETURN $foo', {foo: true})
+    .toPromise()
+    .then(console.log)
+    .catch(console.error)
+    .finally(driver.shutDown);
+```
+
+### Transactions
+```Typescript
+import {flatMap, tap} from 'rxjs';
+
+import {Driver, Num} from '.';
+
+const driver = new Driver({});
+
+// Reactive
+driver.transaction().pipe(
+    flatMap((tx) => tx.query('CREATE (n {foo: $foo}) RETURN n', {foo: true}).pipe(
+        tap(({data}) => data.length.greaterThan(Num.ZERO)
+            ? tx.commit()
+            : tx.rollback()
+        )
+    ))
+).subscribe({
+    next: console.log,
+    complete: driver.shutDown,
+    error: driver.shutDown
 });
 
+// Promise
+getResults()
+    .then(console.log)
+    .catch(console.error)
+    .finally(driver.shutDown)
+
+async function getResults()  {
+    const tx = await driver.transaction().toPromise();
+    const q1 = await tx.query('CREATE (n {foo: $foo}) RETURN n', {foo: true}).toPromise();
+
+    if (q1.data.length.equals(Num.ZERO)) {
+        await tx.rollback().toPromise();
+
+        return;
+    }
+
+    await tx.commit().toPromise();
+
+    return q1;
+}
+```
+
+## Custom unpackers
+Example using a [custom JSON unpacker](./src/packstream/unpacker/json-unpacker.ts), removing all monads from results.
+```Typescript
+import {reduce} from 'rxjs/operators';
+
+import {Driver, DRIVER_HEADERS, JsonUnpacker} from '.';
+
+const driver = new Driver<any>({
+    connectionConfig: {
+        unpacker: JsonUnpacker,
+        getResponseHeader: (data): DRIVER_HEADERS => data[0] || DRIVER_HEADERS.FAILURE,
+        getResponseData: (data): any => data[1] || []
+    },
+    mapToResult: (headerRecord, type, data) => ({header: headerRecord, type, data})
+});
+
+driver.query('MATCH (n) RETURN n')
+    .pipe(
+        reduce((agg, next) => agg.concat(next), [])
+    ).subscribe({
+        next: console.log,
+        complete: driver.shutDown,
+        error: driver.shutDown
+    })
 ```
 
 ## Configuration
 ```Typescript
 import {
-    List,
-    Monad,
-    RecordMonad,
     Packer,
     Unpacker,
-    DRIVER_HEADERS
+    DRIVER_HEADERS,
+    DRIVER_RESULT_TYPE
 } from '.';
 
-export interface IAuth {
+export interface IAuthToken {
     scheme: 'basic',
     principal: string,
     credentials: string;
 }
 
-export interface IConnectionConfig<Data extends any = List<Monad<any>>> {
+export interface IConnectionConfig<Data = any> {
     secure?: true;
-    auth: IAuth;
+    auth: IAuthToken;
     host: string;
     port: number;
     userAgent: string;
@@ -60,12 +146,10 @@ export interface IConnectionConfig<Data extends any = List<Monad<any>>> {
     unpacker?: Unpacker<Data>;
 }
 
-export interface IDriverConfig<Data = Monad<any>,
-    Header = Data,
-    Rec = RecordMonad<Data, Header>> {
+export interface IDriverConfig<Rec = any> {
     maxPoolSize: number;
-    connectionConfig: IConnectionConfig<Data>;
-    mapToRecordHeader: (headerRecord: Data) => Header;
-    mapToRecord: (headerRecord: Header, data: Data) => Rec;
+    connectionConfig: Partial<IConnectionConfig>; // @todo: Partial is not correct
+    mapToResultHeader: (headerRecord: any) => any;
+    mapToResult: (headerRecord: any, type: DRIVER_RESULT_TYPE, data: any) => Rec;
 }
 ```

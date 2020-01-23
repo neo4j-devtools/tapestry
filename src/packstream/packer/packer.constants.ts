@@ -16,10 +16,13 @@ export enum HEADER_SIZE_LIMITS {
     LARGE_STRING = 0xD2,
     TINY_OBJECT = 0xA0,
     MEDIUM_OBJECT = 0xD9,
-    LARGE_OBJECT = 0xDA
+    LARGE_OBJECT = 0xDA,
+    TINY_STRUCT = 0xb0,
+    STRUCT_8 = 0xdc,
+    STRUCT_16 = 0xdd,
 }
 
 export const MAX_HEADER_SIZE = 0x7FFFFFFF;
-export const BOOLEAN_TRUE_BYTES = 0xB3;
-export const BOOLEAN_FALSE_BYTES = 0xB2;
+export const BOOLEAN_TRUE_BYTES = 0xC3;
+export const BOOLEAN_FALSE_BYTES = 0xC2;
 export const NULL_BYTES = 0xC0;

@@ -1,5 +1,5 @@
 import Monad from '../../monad';
-import {TWO_PWR_24_DBL, TWO_PWR_32_DBL, DEFAULT_NUM_RADIX} from './num.constants';
+import {DEFAULT_NUM_RADIX, TWO_PWR_24_DBL, TWO_PWR_32_DBL} from './num.constants';
 import {
     addNums,
     compareNums,
@@ -9,7 +9,9 @@ import {
     fromStringToNum,
     fromValueToNum,
     isCacheable,
-    multiplyNum, shiftNumLeft, shiftNumRight
+    multiplyNum,
+    shiftNumLeft,
+    shiftNumRight
 } from '../../../utils/num.utils';
 
 export default class Num extends Monad<number> {
@@ -23,8 +25,44 @@ export default class Num extends Monad<number> {
     static readonly MAX_SAFE_VALUE = Num.fromBits(0xffffffff | 0, 0x1fffff | 0);
     static readonly TWO_PWR_24 = Num.fromInt(TWO_PWR_24_DBL);
 
-    constructor(value: number = 0, private readonly low = value, private readonly high = value < 0 ? -1 : 0) {
+    constructor(value: number = 0, private readonly ourLow = value, private readonly ourHigh = value < 0 ? -1 : 0) {
         super(value);
+    }
+
+    get isEmpty(): boolean {
+        return typeof this.original !== 'number' || isNaN(this.original);
+    }
+
+    get isZero(): boolean {
+        return this.high === 0 && this.low === 0;
+    }
+
+    get isOdd(): boolean {
+        return (this.low & 1) === 1;
+    }
+
+    get isEven(): boolean {
+        return (this.low & 1) === 0;
+    }
+
+    get isNegative(): boolean {
+        return this.high < 0;
+    }
+
+    get isPositive(): boolean {
+        return this.high >= 0;
+    }
+
+    get isInteger(): boolean {
+        return Number.isInteger(this.original);
+    }
+
+    get high(): number {
+        return this.ourHigh;
+    }
+
+    get low(): number {
+        return this.ourLow;
     }
 
     static isNum(val: any): val is Num {
@@ -35,8 +73,8 @@ export default class Num extends Monad<number> {
         return new Num(Number(val));
     }
 
-    static from(val: any) {
-        return val instanceof Num
+    static from(val: any): Num {
+        return Num.isNum(val)
             ? val
             : Num.of(val);
     }
@@ -71,7 +109,7 @@ export default class Num extends Monad<number> {
     }
 
     toNumber(): number {
-        return this.high * TWO_PWR_32_DBL + (this.low >>> 0);
+        return this.ourHigh * TWO_PWR_32_DBL + (this.ourLow >>> 0);
     }
 
     toString(radix: number = DEFAULT_NUM_RADIX): string {
@@ -79,7 +117,7 @@ export default class Num extends Monad<number> {
     }
 
     toInt(): number {
-        return this.getLow();
+        return this.low;
     }
 
     toNumberOrInfinity() {
@@ -94,40 +132,12 @@ export default class Num extends Monad<number> {
         return this.toNumber();
     }
 
-    isEmpty(): boolean {
-        return typeof this.original !== 'number' || isNaN(this.original);
-    }
-
-    isZero(): boolean {
-        return this.getHigh() === 0 && this.getLow() === 0;
-    }
-
-    isOdd(): boolean {
-        return (this.getLow() & 1) === 1;
-    }
-
-    isEven(): boolean {
-        return (this.getLow() & 1) === 0;
-    }
-
-    isNegative(): boolean {
-        return this.getHigh() < 0;
-    }
-
-    isPositive(): boolean {
-        return this.getHigh() >= 0;
-    }
-
-    isInteger(): boolean {
-        return Number.isInteger(this.original);
-    }
-
     equals(other: any): boolean {
         const otherToUse = Num.isNum(other)
             ? other
             : Num.fromValue(other);
 
-        return this.getHigh() === otherToUse.getHigh() && this.getLow() === otherToUse.getLow();
+        return this.high === otherToUse.high && this.low === otherToUse.low;
     }
 
     lessThan(other: number | string | Num): boolean {
@@ -144,14 +154,6 @@ export default class Num extends Monad<number> {
 
     greaterThanOrEqual(other: number | string | Num): boolean {
         return this.compare(other) >= 0;
-    }
-
-    getHigh(): number {
-        return this.high;
-    }
-
-    getLow(): number {
-        return this.low;
     }
 
     negate(): Num {
@@ -179,7 +181,7 @@ export default class Num extends Monad<number> {
     }
 
     not(): Num {
-        return Num.fromBits(~this.getLow(), ~this.getHigh());
+        return Num.fromBits(~this.low, ~this.high);
     }
 
     multiply(multiplier: number | string | Num): Num {

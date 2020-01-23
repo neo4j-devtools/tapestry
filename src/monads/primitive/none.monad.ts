@@ -5,7 +5,11 @@ export default class None<T extends any = any> extends Monad<T> {
 
     constructor() {
         // @ts-ignore
-        super(null);
+        super(undefined);
+    }
+
+    get isEmpty(): true {
+        return true;
     }
 
     static isNone<T extends any = any>(val: any): val is None<T> {
@@ -18,10 +22,6 @@ export default class None<T extends any = any> extends Monad<T> {
 
     static from<T extends any = any>(_?: any): None<T> {
         return None.EMPTY;
-    }
-
-    isEmpty(): true {
-        return true;
     }
 
     toString(): string {
