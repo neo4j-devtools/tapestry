@@ -12,7 +12,7 @@ import {IDriverConfig} from '../types';
 
 import Connection from '../connection/connection.class';
 import {DEFAULT_CONNECTION_CONFIG, DEFAULT_DRIVER_CONFIG, DRIVER_COMMANDS, DRIVER_HEADERS} from './driver.constants';
-import {arrayHasItems} from '../../utils/array.utils';
+import {arrayHasItems} from '../utils/array.utils';
 
 export interface IQuery {
     cmd: DRIVER_COMMANDS;

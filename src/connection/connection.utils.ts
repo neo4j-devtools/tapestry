@@ -1,8 +1,8 @@
 import {flatMap} from 'lodash';
 
-import {IConnectionConfig} from '../types';
+import {IConnectionConfig, Packer} from '../types';
 
-import {Packer, packRequestData} from '../packstream/index';
+import {packRequestData} from '../packstream';
 import {BOLT_PROTOCOLS, V1_BOLT_MESSAGES} from './connection.constants';
 import {DRIVER_COMMANDS} from '../driver/driver.constants';
 

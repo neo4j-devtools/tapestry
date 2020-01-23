@@ -1,25 +1,24 @@
-import {Driver} from './client';
-import {Dict, List, Monad, NodeMonad, RecordMonad, Str} from './monads';
-import {filter, flatMap, map, reduce} from 'rxjs/operators';
+import {reduce} from 'rxjs/operators';
 
-type Header = Dict<Monad<any>>;
-type Data = List<NodeMonad>;
-type Rec = RecordMonad<Data, Header>;
+import {Driver, DRIVER_HEADERS} from './index';
+import {JSONUnpackerV1} from './json-unpacker.v1';
 
-const driver = new Driver<Data, Header, Rec>({});
+const driver = new Driver<any>({
+    connectionConfig: {
+        unpacker: JSONUnpackerV1,
+        getResponseHeader: (data: any[]): DRIVER_HEADERS => data[0] || DRIVER_HEADERS.FAILURE,
+        getResponseData: (data: any[]): any => data[1] || [],
+    },
+    mapToRecord: (headerRecord: any, data: any) =>({header: headerRecord, data})
+});
 
 console.time('runQuery');
-driver.runQuery('RETURN 1').subscribe(); // preflight
 const result = driver.runQuery('MATCH (n) RETURN n LIMIT 100')
     .pipe(
-        flatMap((record) => record.getData()),
-        map((node) => node.getIdentity()),
-        filter((id) => id.greaterThan(0)),
-        map(Str.of),
-        reduce((agg, next) => agg.concat(next), List.of<Str>([]))
+        reduce((agg, next) => agg.concat(next), [])
     ).toPromise();
 
 result.then((res) => {
-    console.log('runQuery', `${res}`);
+    console.log('runQuery', res);
     console.timeEnd('runQuery');
 });

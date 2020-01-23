@@ -1,5 +1,5 @@
 import {IConnectionConfig, IDriverConfig} from '../types';
-import {List, Num, RecordMonad} from '../../monads/index';
+import {List, Num, RecordMonad} from '../monads';
 
 export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
     auth: {

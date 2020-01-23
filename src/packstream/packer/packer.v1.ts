@@ -1,6 +1,6 @@
 import {entries, flatMap, take} from 'lodash';
 
-import {PackerInternal} from './packer';
+import {PackerInternal} from '../../types';
 
 import {BOLT_PROTOCOLS} from '../../connection/connection.constants';
 import {
