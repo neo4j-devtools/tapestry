@@ -33,4 +33,8 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
     isEmpty() {
         return None.isNone(this.original);
     }
+
+    toString(): string {
+        return `${this.constructor.name} {${this.original}}}`
+    }
 }

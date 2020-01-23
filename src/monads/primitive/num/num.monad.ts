@@ -75,7 +75,7 @@ export default class Num extends Monad<number> {
     }
 
     toString(radix: number = DEFAULT_NUM_RADIX): string {
-        return `${this.constructor.name} {${fromNumToString(this, radix)}}`;
+        return `${fromNumToString(this, radix)}`;
     }
 
     toInt(): number {

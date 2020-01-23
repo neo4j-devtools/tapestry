@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
 import {dateToIsoString} from '../../utils/temporal.utils';
@@ -38,6 +40,10 @@ export default class DateMonad extends Monad<RawDate> {
         });
     }
 
+    static fromMessage(days: Num = Num.of(0)) {
+        return days.flatMap((no) => DateMonad.fromStandardDate(moment(0).add(no, 'days').toDate()));
+    }
+
     isEmpty(): boolean {
         return false; // @todo
     }
@@ -55,6 +61,6 @@ export default class DateMonad extends Monad<RawDate> {
     }
 
     toString() {
-        return dateToIsoString(this.getYear(), this.getMonth(), this.getDay());
+        return `${dateToIsoString(this.getYear(), this.getMonth(), this.getDay())}`;
     }
 }

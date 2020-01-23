@@ -79,6 +79,6 @@ export default class Monad<T extends any> implements IMonad<T> {
     }
 
     toString() {
-        return `${this.constructor.name} {${this.original}}`;
+        return `${this.original}`;
     }
 }

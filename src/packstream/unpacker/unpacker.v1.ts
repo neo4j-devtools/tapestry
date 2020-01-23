@@ -30,29 +30,12 @@ import {
     unpackNil,
     unpackNone,
     unpackNumber,
-    unpackString, unwindList
+    unpackString,
+    unwindList
 } from './unpacker.utils';
 
-export function unpackerV1(protocol: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number, unpacker: UnpackerInternal): UnpackerReturn<any> {
-    if (unpacker !== unpackerV1) {
-        switch (dataType) {
-            case BOLT_RESPONSE_DATA_TYPES.LIST: {
-                return unpackList(view, size, pos, unpacker);
-            }
-
-            case BOLT_RESPONSE_DATA_TYPES.MAP: {
-                return unpackMap(view, size, pos, unpacker);
-            }
-
-            case BOLT_RESPONSE_DATA_TYPES.STRUCT: {
-                return unpackStructure(view, size, pos, unpacker);
-            }
-
-            default: {
-                return unpacker(protocol, dataType, view, size, pos, unpacker);
-            }
-        }
-    }
+export function unpackerV1(_: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES, view: DataView, size: number, pos: number, unpacker: UnpackerInternal): UnpackerReturn<Monad<any>> {
+    const isDefaultUnpacker = unpacker === unpackerV1;
 
     switch (dataType) {
         case BOLT_RESPONSE_DATA_TYPES.INT8:
@@ -85,7 +68,10 @@ export function unpackerV1(protocol: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DAT
         case BOLT_RESPONSE_DATA_TYPES.STRUCT: {
             const {finalPos, data: struct} = unpackStructure(view, size, pos, unpacker);
 
-            return {finalPos, data: tryGetStructMonad(List.of(struct))};
+            return {
+                finalPos,
+                data: isDefaultUnpacker ? tryGetStructMonad(List.of(struct)) : List.of(struct)
+            };
         }
 
         case BOLT_RESPONSE_DATA_TYPES.NULL: {
@@ -300,11 +286,11 @@ function unpackStructure(view: DataView, size: number, pos: number, unpacker: Un
 function tryGetStructMonad(struct: List): Monad<any> {
     // @todo: could be optimised
     const firstBytes = struct.first().getOrElse(Num.of(0));
-    const rest = struct.slice(1);
+    const rest: List<any> = struct.slice(1);
 
     switch (firstBytes.getOrElse(0)) {
         case 0x44: {
-            return DateMonad.of(unwindList(rest, ['days']));
+            return DateMonad.fromMessage(...rest);
         }
 
         case 0x45: {
@@ -313,7 +299,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
 
         case 0x66:
         case 0x46: {
-            return DateTime.of(unwindList(rest, ['seconds', 'nanoseconds', 'tz']));
+            return DateTime.fromMessage(...rest);
         }
 
         case 0x4E: {
@@ -330,11 +316,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
         }
 
         case 0x54: {
-            return TimeMonad.of({
-                // @todo
-                seconds: (<Maybe<Num>>rest.first()).getOrElse(Num.of(0)).divide(1000000000),
-                tz: rest.first().getOrElse(Num.of(0))
-            });
+            return TimeMonad.fromMessage(...rest);
         }
 
         case 0x58: {
@@ -342,7 +324,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
         }
 
         case 0x64: {
-            return LocalDateTime.of(unwindList(rest, ['seconds', 'nanoseconds']));
+            return LocalDateTime.fromMessage(...rest);
         }
 
         case 0x72: {
@@ -350,10 +332,7 @@ function tryGetStructMonad(struct: List): Monad<any> {
         }
 
         case 0x74: {
-            return LocalTime.of({
-                // @todo
-                seconds: (<Maybe<Num>>rest.first()).getOrElse(Num.of(0)).divide(1000000000)
-            });
+            return LocalTime.fromMessage(...rest);
         }
 
         default: {

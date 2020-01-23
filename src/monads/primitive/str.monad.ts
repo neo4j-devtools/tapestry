@@ -22,8 +22,4 @@ export default class Str extends Monad<string> {
     isEmpty() {
         return typeof this.original !== 'string' || this.original.length === 0;
     }
-
-    toString(): string {
-        return `${this.constructor.name} {"${this.original}"}`;
-    }
 }

@@ -60,6 +60,6 @@ export default class Dict<T = Monad<any>> extends Monad<RawDict<T>> {
     }
 
     toString(): string {
-        return `${this.constructor.name} {${join(map([...this.original.entries()], ([key, val]) => `${key}: ${val}`), ', ')}}`;
+        return `{${join(map([...this.original.entries()], ([key, val]) => `${key}: ${val}`), ', ')}}`;
     }
 }

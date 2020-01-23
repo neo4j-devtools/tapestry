@@ -1,6 +1,7 @@
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
 import {timeToIsoString, timeZoneOffsetToIsoString, totalNanoseconds, timeZoneOffsetInSeconds} from '../../utils/temporal.utils';
+import moment from 'moment';
 
 export interface RawTime {
     hour: Num;
@@ -34,7 +35,7 @@ export default class TimeMonad extends Monad<RawTime> {
             : TimeMonad.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: number) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num) {
         return TimeMonad.of({
             hour: standardDate.getHours(),
             minute: standardDate.getMinutes(),
@@ -42,6 +43,13 @@ export default class TimeMonad extends Monad<RawTime> {
             nanosecond: totalNanoseconds(standardDate, nanosecond),
             timeZoneOffsetInSeconds: timeZoneOffsetInSeconds(standardDate)
         });
+    }
+
+    static fromMessage(seconds: Num = Num.of(0)) {
+        return seconds.divide(1000000000).flatMap((secs) => TimeMonad.fromStandardDate(
+            moment(0).add(secs, 'seconds').toDate(),
+            Num.of(0) // @todo: more
+        ));
     }
 
     isEmpty(): boolean {

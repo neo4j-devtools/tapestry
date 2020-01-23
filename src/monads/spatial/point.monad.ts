@@ -72,7 +72,7 @@ export default class Point extends Monad<RawPoint> {
             ? `Point {srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
                 this.getX()
             )}, y=${formatAsFloat(this.getY())}}`
-            : `Point{srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
+            : `Point {srid=${formatAsFloat(this.getSrid())}, x=${formatAsFloat(
                 this.getX()
             )}, y=${formatAsFloat(this.getY())}, z=${formatAsFloat(zVal)}}`
         )).get();

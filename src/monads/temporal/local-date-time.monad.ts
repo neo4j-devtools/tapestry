@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
 import {localDateTimeToString, totalNanoseconds} from '../../utils/temporal.utils';
@@ -38,7 +40,7 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
             : LocalDateTime.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: number) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num) {
         return LocalDateTime.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -48,6 +50,13 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
             second: standardDate.getSeconds(),
             nanosecond: totalNanoseconds(standardDate, nanosecond)
         });
+    }
+
+    static fromMessage(seconds: Num = Num.of(0), nanoseconds: Num = Num.of(0)) {
+        return seconds.flatMap((secs) => LocalDateTime.fromStandardDate(
+            moment(0).add(secs, 'seconds').toDate(),
+            nanoseconds
+        ));
     }
 
     isEmpty(): boolean {

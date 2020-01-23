@@ -23,4 +23,8 @@ export default class None<T extends any = any> extends Monad<T> {
     isEmpty(): true {
         return true;
     }
+
+    toString(): string {
+        return `${this.constructor.name} {${this.original}}}`
+    }
 }

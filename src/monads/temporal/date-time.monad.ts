@@ -1,9 +1,16 @@
+import moment from 'moment';
+
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
 import Str from '../primitive/str.monad';
 import None from '../primitive/none.monad';
 import Maybe from '../primitive/maybe.monad';
-import {localDateTimeToString, timeZoneOffsetInSeconds, timeZoneOffsetToIsoString, totalNanoseconds} from '../../utils/temporal.utils';
+import {
+    localDateTimeToString,
+    timeZoneOffsetInSeconds,
+    timeZoneOffsetToIsoString,
+    totalNanoseconds
+} from '../../utils/temporal.utils';
 
 export interface RawDateTime {
     year: Num;
@@ -53,7 +60,7 @@ export default class DateTime extends Monad<RawDateTime> {
             : DateTime.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: number) {
+    static fromStandardDate(standardDate: Date, nanosecond: Num, timeZoneId?: Str) {
         return DateTime.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -63,8 +70,20 @@ export default class DateTime extends Monad<RawDateTime> {
             second: standardDate.getSeconds(),
             nanosecond: totalNanoseconds(standardDate, nanosecond),
             timeZoneOffsetSeconds: timeZoneOffsetInSeconds(standardDate),
-            timeZoneId: null
+            timeZoneId: Maybe.of(
+                timeZoneId && !timeZoneId.isEmpty()
+                    ? timeZoneId
+                    : None.EMPTY
+            )
         });
+    }
+
+    static fromMessage(seconds: Num = Num.of(0), nanoseconds: Num = Num.of(0)) {
+        return seconds.flatMap((secs) => DateTime.fromStandardDate(
+            moment(0).add(secs, 'seconds').toDate(),
+            nanoseconds,
+            None.EMPTY // @todo: more
+        ));
     }
 
     isEmpty(): boolean {
@@ -123,6 +142,6 @@ export default class DateTime extends Monad<RawDateTime> {
             ? zoneId.map((zone) => `[${zone}]`).get()
             : timeZoneOffsetToIsoString(timeZoneOffsetSeconds.get());
 
-        return localDateTimeStr + timeZoneStr;
+        return `${localDateTimeStr}${timeZoneStr}}`;
     }
 }

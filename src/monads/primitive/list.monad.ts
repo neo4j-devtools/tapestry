@@ -124,6 +124,6 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
     }
 
     toString() {
-        return `${this.constructor.name} {${join(this.original, ', ')}}`;
+        return `[${join(this.original, ', ')}]`;
     }
 }

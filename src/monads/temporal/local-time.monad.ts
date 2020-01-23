@@ -1,6 +1,7 @@
 import Num from '../primitive/num/num.monad';
 import Monad from '../monad';
 import {timeToIsoString, totalNanoseconds} from '../../utils/temporal.utils';
+import moment from 'moment';
 
 export interface RawLocalTime {
     hour: Num;
@@ -46,6 +47,13 @@ export default class LocalTime extends Monad<RawLocalTime> {
             second: standardDate.getSeconds(),
             nanosecond: totalNanoseconds(standardDate, nanosecond)
         });
+    }
+
+    static fromMessage(seconds: Num = Num.of(0)) {
+        return seconds.divide(1000000000).flatMap((secs) => LocalTime.fromStandardDate(
+            moment(0).add(secs, 'seconds').toDate(),
+            Num.of(0) // @todo: more
+        ));
     }
 
     isEmpty(): boolean {
