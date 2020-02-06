@@ -2,6 +2,8 @@ import Monad from '../monad';
 import None from './none.monad';
 
 export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
+    static EMPTY = new Maybe(None.EMPTY);
+
     constructor(val?: T | None) {
         // @ts-ignore
         super(val);
@@ -16,11 +18,10 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
     }
 
     static of<T = Monad<any>>(val?: T | None): Maybe<T> {
-        const sane = val !== undefined
-            ? val
-            : None.EMPTY;
-
-        return new Maybe<T>(sane);
+        // @ts-ignore
+        return val !== undefined && !None.isNone(val)
+            ? new Maybe<T>(val)
+            : Maybe.EMPTY;
     }
 
     static from<T = Monad<any>>(val: any): Maybe<T> {
@@ -29,7 +30,7 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
             : Maybe.of(val);
     }
 
-    getOrElse(other: T): T {
+    getOrElse<M = T>(other: M): M {
         // @ts-ignore
         return super.getOrElse(other);
     }

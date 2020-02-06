@@ -136,7 +136,7 @@ export default class DateTime extends Monad<RawDateTime> {
             this.second,
             this.nanosecond
         );
-        const zoneId = this.timeZoneId.getOrElse(Str.of(''));
+        const zoneId = this.timeZoneId.getOrElse(Str.EMPTY);
         const timeZoneOffsetSeconds = this.timeZoneOffsetSeconds.getOrElse(Num.ZERO);
         const timeZoneStr = !zoneId.isEmpty
             ? zoneId.map((zone) => `[${zone}]`).get()

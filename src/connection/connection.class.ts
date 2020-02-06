@@ -33,6 +33,10 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
         this.socket.onclose = this.onClose;
     }
 
+    public get address() {
+        return `${this.config.host}:${this.config.port}`;
+    }
+
     private get didHandshake() {
         return this.protocol !== BOLT_PROTOCOLS.UNKNOWN;
     }

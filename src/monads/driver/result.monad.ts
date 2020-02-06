@@ -1,36 +1,53 @@
 import Monad from '../monad';
 import {DRIVER_RESULT_TYPE} from '../../driver';
-import {Dict, List} from '../index';
+import {Dict, List, Maybe, Num, Str} from '../index';
 
-export type RawResult<Data = List<Monad<any>>, Header = Dict<Monad<any>>> = {
-    header: Header,
+export type RawResult<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>> = {
+    header: Dict<Header>,
     type: DRIVER_RESULT_TYPE,
-    data: Data,
+    data: List<Data>,
 };
 
-export default class Result<Data = List<Monad<any>>, Header = Dict<Monad<any>>> extends Monad<RawResult<Data, Header>> {
-    get header() {
+export default class Result<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>> extends Monad<RawResult<Data, Header>> {
+    get header(): Dict<Header> {
         return this.original.header;
     }
 
-    get data() {
+    get data(): List<Data> {
         return this.original.data;
     }
 
-    get type() {
+    get type(): DRIVER_RESULT_TYPE {
         return this.original.type;
     }
 
-    static isResult<Data = Monad<any>, Header = Data>(val: any): val is Result<Data, Header> {
+    get fields(): List<Str> {
+        return this.header.getValue('fields').flatMap((val) =>
+            List.isList<Str>(val)
+                ? val
+                : List.of<Str>([])
+        )
+    }
+
+    getFieldData(field: Str | string): Maybe<Data> {
+        const key = Str.from(field);
+
+        return this.fields.indexOf(key).switchMap((val) => val.lessThan(Num.ZERO)
+            ? Maybe.of<Data>()
+            : this.data.getIndex(val)
+        )
+    }
+
+    static isResult<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>>(val: any): val is Result<Data, Header> {
         return val instanceof Result;
     }
 
-    static of<Data = Monad<any>, Header = Data>(val: any): Result<Data, Header> {
+    static of<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>>(val: any): Result<Data, Header> {
         // @todo: typechecking
         return new Result<Data, Header>(val);
     }
 
-    static from<Data = Monad<any>, Header = Data>(val: any): Result<Data, Header> {
+    static from<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>>(val: any): Result<Data, Header> {
         return Result.isResult<Data, Header>(val)
             ? val
             : Result.of<Data, Header>(val);

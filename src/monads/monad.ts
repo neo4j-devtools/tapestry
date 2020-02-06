@@ -27,6 +27,10 @@ export default class Monad<T extends any> implements IMonad<T> {
             : [original];
     }
 
+    isThis(other?: any): other is this {
+        return other instanceof this.constructor;
+    }
+
     get isEmpty() {
         return this.original == null;
     }
@@ -66,7 +70,7 @@ export default class Monad<T extends any> implements IMonad<T> {
             return false;
         }
 
-        return other.map((val) => val === this.original).getOrElse(false);
+        return other.get() === this.get();
     }
 
     map(project: (value: T) => T): this {
@@ -78,8 +82,16 @@ export default class Monad<T extends any> implements IMonad<T> {
         return project(this.original);
     }
 
+    switchMap<M extends IMonad<any> = Monad<any>>(project: (value: this) => M): M {
+        return project(this);
+    }
+
     toString() {
         return `${this.original}`;
+    }
+
+    toJSON() {
+        return JSON.parse(JSON.stringify(this.original));
     }
 
     valueOf() {

@@ -1,83 +1,59 @@
-import {BehaviorSubject, forkJoin, Observable, of, Subject} from 'rxjs';
-import {flatMap, map, mapTo, skipWhile, take, takeWhile, tap} from 'rxjs/operators';
+import {forkJoin, Observable} from 'rxjs';
+import {filter, flatMap, map, mapTo, reduce, take} from 'rxjs/operators';
 import uuid from 'uuid/v4';
 import {boundMethod} from 'autobind-decorator';
-import {filter as _filter, forEach as _forEach, map as _map, merge as _merge, some as _some} from 'lodash';
+import _ from 'lodash';
 
-import {IClientMessage, IDriverConfig, IRequest, IRunQueryMeta} from '../types';
+import {IBaseMeta, IConnectionConfig, IDiscoveryTable, IDriverConfig, IRequest, ITransactionMeta} from '../types';
+// only used internally
+import {Bool, List, Result, Str} from '../monads';
 
 import {
+    DBMS_DB_STATUS,
+    DBMS_MEMBER_ROLE,
     DEFAULT_CONNECTION_CONFIG,
     DEFAULT_DRIVER_CONFIG,
-    DRIVER_HEADERS,
     DRIVER_QUERY_COMMANDS,
     DRIVER_RESULT_TYPE,
     DRIVER_TRANSACTION_COMMANDS
 } from './driver.constants';
-import {arrayHasItems} from '../utils/array.utils';
 import {BOLT_PROTOCOLS, Connection} from '../connection';
-import {InvalidOperationError} from '../errors';
+import DriverBase from './driver.abstract';
+import TransactionDriver from './transaction-driver.class';
 
-export default class Driver<Rec = any> {
-    protected config: IDriverConfig;
-    protected connections: Connection[] = [];
-    protected available: Connection[] = [];
-    protected availableConnections: BehaviorSubject<Connection[]> = new BehaviorSubject<Connection[]>([]);
-    protected requestQueue: Subject<IRequest> = new Subject();
-    protected processing: Observable<[IRequest, Connection[]]> = this.requestQueue.pipe(
-        flatMap((request) => this.availableConnections.pipe(
-            map((connections): [IRequest, Connection[]] => [request, connections])
-        ))
-    );
-    protected isShutDown = false;
+export default class Driver<Rec = any> extends DriverBase<Rec> {
+    private discoveryPoll: NodeJS.Timeout | null = null;
 
     constructor(config: Partial<IDriverConfig>) {
-        this.config = _merge({}, DEFAULT_DRIVER_CONFIG, config);
+        super(_.merge({}, DEFAULT_DRIVER_CONFIG, config));
+
+        if (this.config.useRouting) {
+            this.runDiscovery();
+
+            this.discoveryPoll = setInterval(this.runDiscovery, this.config.discoveryIntervalMs);
+        }
     }
 
     @boundMethod
-    query<Res = Rec>(cypher: string, params: any = {}, meta: IRunQueryMeta = {}): Observable<Res> {
-        const {pullN = -1} = meta;
-
-        return this.sendMessages<Res>([
-            {
-                cmd: DRIVER_QUERY_COMMANDS.RUN,
-                data: [cypher, params, {}],
-                additionalData: (protocol) => protocol >= BOLT_PROTOCOLS.V3
-                    ? [{}]
-                    : []
-            },
-            {
-                cmd: DRIVER_QUERY_COMMANDS.PULL,
-                data: [],
-                additionalData: (protocol) => protocol >= BOLT_PROTOCOLS.V4
-                    ? [{n: pullN}]
-                    : []
-            }
-        ]);
-    }
-
-    // @boundMethod directive freaks out on inherited props
-    transaction = <Res = Rec>(): Observable<BoundDriver<Res>> => {
+    transaction<Res = Rec>(meta: IBaseMeta = {}): Observable<TransactionDriver<Res>> {
         return this.getConnectionForRequest().pipe(
-            flatMap(([, connection]) => this.beginTransaction(connection)),
-            map((connection) => new BoundDriver(connection, this.config, this.releaseConnection)),
+            flatMap(([, connection]) => this.beginTransaction(connection, meta)),
+            // @todo: for all connections on same member
+            map(([meta, connection]) => new TransactionDriver(meta, [connection], this.config, this.releaseConnection)),
             take(1) // force complete
         );
     };
 
-    commit() {
-        throw new InvalidOperationError('No transaction pending');
-    }
-
-    rollback() {
-        throw new InvalidOperationError('No transaction pending');
-    }
-
-    // @boundMethod directive freaks out on inherited props
-    shutDown = (): Promise<this> => {
+    @boundMethod
+    shutDown(): Promise<this> {
         if (this.isShutDown) {
             return Promise.resolve(this);
+        }
+
+        if (this.discoveryPoll) {
+            clearInterval(this.discoveryPoll);
+
+            this.discoveryPoll = null;
         }
 
         const {connections} = this;
@@ -87,264 +63,96 @@ export default class Driver<Rec = any> {
 
         this.availableConnections.next([]);
 
-        return forkJoin(_map(connections, (con) => con.terminate())).pipe(
+        return forkJoin(_.map(connections, (con) => con.terminate())).pipe(
             mapTo(this)
         ).toPromise();
     };
 
-    @boundMethod
-    protected sendMessages<Res>(messages: IClientMessage[] = []): Observable<Res> {
-        return this.getConnectionForRequest(messages).pipe(
-            flatMap(([request, connection]) => this.executeRequests<Res>(request, connection))
-        );
-    }
+    private beginTransaction(connection: Connection, meta: IBaseMeta = {}): Observable<[ITransactionMeta, Connection]> {
+        const {db} = meta;
 
-    @boundMethod
-    protected getConnectionForRequest(messages: IClientMessage[] = []): Observable<[IRequest, Connection]> {
-        if (this.isShutDown) {
-            throw new InvalidOperationError('Driver is shut down');
-        }
-
-        const requestID = uuid();
-
-        // @todo: actually handle this properly
-        setTimeout(() => {
-            this.requestQueue.next({
-                id: requestID,
-                messages,
-            });
-            this.requestAvailableConnection();
-        });
-
-        return this.processing.pipe(
-            skipWhile(([request, connections]) => request.id !== requestID || !arrayHasItems(connections)),
-            take(1),
-            map(([request, connections]): [IRequest, Connection] => [request, connections[0]]),
-            tap(([, connection]) => this.occupyConnection(connection)),
-        );
-
-    }
-
-    @boundMethod
-    protected executeRequests<Res>(request: IRequest, connection: Connection): Observable<Res> {
-        console.log('exec', request.id);
-        console.time(request.id);
-
-        _forEach(request.messages, (query) => {
-            connection.sendMessage(query).toPromise();
-        });
-
-        let headerRecord: any;
-
-        return new Observable<Res>((subscriber) => {
-            let remaining = request.messages.length;
-
-            connection.pipe(takeWhile(() => remaining !== 0)).subscribe({
-                next: (message) => {
-                    const {header, data} = message;
-
-                    if (header === DRIVER_HEADERS.FAILURE) {
-                        remaining = 0;
-
-                        subscriber.error(data);
-                        this.releaseConnection(connection);
-                        console.timeEnd(request.id);
-
-                        return;
-                    }
-
-                    if (headerRecord && header === DRIVER_HEADERS.SUCCESS) {
-                        remaining -= 1;
-
-                        // @todo: cleanup
-                        subscriber.next(this.config.mapToResult(
-                            headerRecord,
-                            DRIVER_RESULT_TYPE.SUMMARY,
-                            data
-                        ));
-                    }
-
-                    if (!headerRecord && header === DRIVER_HEADERS.SUCCESS) {
-                        remaining -= 1;
-
-                        // @todo: cleanup
-                        headerRecord = this.config.mapToResultHeader(data);
-                    }
-
-                    if (header === DRIVER_HEADERS.RECORD) {
-                        // @todo: cleanup
-                        subscriber.next(this.config.mapToResult(
-                            headerRecord,
-                            DRIVER_RESULT_TYPE.RECORD,
-                            data
-                        ));
-                    }
-
-                    if (remaining === 0) {
-                        console.log('complete', request.id);
-                        console.timeEnd(request.id);
-                        subscriber.complete();
-                        this.releaseConnection(connection);
-                    }
-                },
-                error: (err) => {
-                    remaining = 0;
-
-                    console.timeEnd(request.id);
-                    subscriber.error(err);
-                }
-            });
-        });
-    }
-
-    @boundMethod
-    protected addConnection() {
-        const connectionParams = _merge({}, DEFAULT_CONNECTION_CONFIG, this.config.connectionConfig);
-        const connection = new Connection(connectionParams);
-
-        this.connections.push(connection);
-
-        connection.subscribe({
-            complete: () => this.terminateConnection(connection),
-            error: () => this.terminateConnection(connection),
-        });
-
-        return connection;
-    }
-
-    @boundMethod
-    protected occupyConnection(connection: Connection): Connection {
-        if (!_some(this.available, ({id}) => id === connection.id)) {
-            return connection;
-        }
-
-        this.available = _filter(this.available, ({id}) => id !== connection.id);
-
-        this.availableConnections.next(this.available);
-
-        return connection;
-    }
-
-    @boundMethod
-    protected releaseConnection(connection: Connection): Connection {
-        if (!_some(this.connections, ({id}) => id === connection.id)) {
-            return connection;
-        }
-
-        if (_some(this.available, ({id}) => id === connection.id)) {
-            return connection;
-        }
-
-        this.available = [
-            ...this.available,
-            connection
-        ];
-
-        this.availableConnections.next(this.available);
-
-        return connection;
-    }
-
-    @boundMethod
-    protected requestAvailableConnection() {
-        if (arrayHasItems(this.available)) {
-            return;
-        }
-
-        if (this.connections.length < this.config.maxPoolSize) {
-            const connection = this.addConnection();
-
-            this.connections = [
-                ...this.connections,
-                connection
-            ];
-
-            this.releaseConnection(connection);
-            this.availableConnections.next(this.available);
-        }
-    }
-
-    @boundMethod
-    protected terminateConnection(connection: Connection): Promise<Connection> {
-        this.occupyConnection(connection);
-
-        this.connections = _filter(this.connections, ({id}) => id !== connection.id);
-
-        return connection.terminate();
-    }
-
-    private beginTransaction(connection: Connection) {
         return connection.sendMessage({
             cmd: DRIVER_TRANSACTION_COMMANDS.BEGIN,
             data: [],
-            additionalData: (protocol) => protocol >= BOLT_PROTOCOLS.V3
-                ? [{}]
-                : []
-        }).pipe(
-            mapTo(connection)
-        );
-    }
-}
+            additionalData: (protocol) => {
+                if (protocol < BOLT_PROTOCOLS.V3) {
+                    return []
+                }
 
-type TransactionCallback = (connection: Connection) => Connection;
-
-export class BoundDriver<Rec = any> extends Driver<Rec> {
-    constructor(connection: Connection, config: IDriverConfig, onComplete: TransactionCallback) {
-        const boundConfig: IDriverConfig = {
-            ...config,
-            maxPoolSize: 1,
-        };
-
-        super(boundConfig);
-
-        this.connections.push(connection);
-        this.releaseConnection(connection);
-
-        // @boundMethod directive freaks out on inherited props
-        this.transaction = (): Observable<BoundDriver> => {
-            throw new InvalidOperationError('Transaction pending');
-        };
-
-        // @boundMethod directive freaks out on inherited props
-        this.shutDown = () => {
-            if (this.isShutDown) {
-                return Promise.resolve(this);
+                return db && protocol > BOLT_PROTOCOLS.V3
+                    ? [{db}]
+                    : [{}];
             }
+        }).pipe(
+            mapTo([{sessionId: uuid()}, connection])
+        );
+    }
 
-            this.isShutDown = true;
+    @boundMethod
+    private runDiscovery() {
+        // use our default type system for this call
+        const routingConfig: IConnectionConfig = _.merge(
+            _.omit(this.connectionConfig, ['packer', 'unpacker']),
+            _.pick(DEFAULT_CONNECTION_CONFIG, ['getResponseHeader', 'getResponseData']),
+        );
+        const routingConnection = this.createConnection(routingConfig);
 
-            return of(_map(this.connections, onComplete)).pipe(
-                mapTo(this)
-            ).toPromise();
+        // 4.X only for now
+        const routingRequest: IRequest = {
+            id: uuid(),
+            messages: [
+                {
+                    cmd: DRIVER_QUERY_COMMANDS.RUN,
+                    data: ['SHOW DATABASES', {}, {db: 'system'}]
+                },
+                {
+                    cmd: DRIVER_QUERY_COMMANDS.PULL,
+                    data: [{n: -1}]
+                }
+            ]
         };
 
-        connection.subscribe({
-            complete: this.shutDown,
-            error: this.shutDown
-        });
-    }
+        const result = this.executeRequests<Result>(routingRequest, routingConnection).pipe(
+            filter(({type}) => type === DRIVER_RESULT_TYPE.RECORD),
+            reduce((agg, next) => agg.concat(next), List.of<Result>([])),
+            map((results) => results.reduce<IDiscoveryTable[]>((agg, next) => [
+                ...agg,
+                {
+                    name: next.getFieldData('name').getOrElse(Str.EMPTY),
+                    address: next.getFieldData('address').getOrElse(Str.EMPTY),
+                    currentStatus: next.getFieldData('currentStatus').flatMap((val) => val.equals(Str.of('online'))
+                        ? Str.of(DBMS_DB_STATUS.ONLINE)
+                        : Str.of(DBMS_DB_STATUS.OFFLINE)
+                    ),
+                    role: next.getFieldData('role').flatMap((val) => val.equals(Str.of('follower'))
+                        ? Str.of(DBMS_MEMBER_ROLE.FOLLOWER)
+                        : Str.of(DBMS_MEMBER_ROLE.LEADER)
+                    ),
+                    isDefault: next.getFieldData('default').getOrElse(Bool.FALSE),
+                }
+            ], []))
+        ).toPromise();
 
-    @boundMethod
-    commit<Res = Rec>(): Observable<Res> {
-        return this.sendMessages<Res>([
-            {
-                cmd: DRIVER_TRANSACTION_COMMANDS.COMMIT,
-                data: [{}]
-            },
-        ]).pipe(
-            tap(this.shutDown)
-        );
-    }
+        result
+            .then((tables) => {
+                this.discoveryTables = tables;
 
-    @boundMethod
-    rollback<Res = Rec>(): Observable<Res> {
-        return this.sendMessages<Res>([
-            {
-                cmd: DRIVER_TRANSACTION_COMMANDS.ROLLBACK,
-                data: [{}]
-            },
-        ]).pipe(
-            tap(this.shutDown)
-        );
+                if (this.isReady) {
+                    return;
+                }
+
+                this.isReady = true;
+
+                // signal ready to send messages
+                this.readySubject.next();
+                this.readySubject.complete();
+            })
+            .catch((err) => {
+                console.log(`Failed to perform discovery: ${err}`);
+
+                return this.shutDown();
+            })
+            .finally(routingConnection.terminate)
     }
 }
+

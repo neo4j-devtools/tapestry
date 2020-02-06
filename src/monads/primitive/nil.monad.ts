@@ -1,6 +1,8 @@
 import Monad from '../monad';
 
 export default class Nil extends Monad<null> {
+    static NULL = new Nil();
+
     constructor(_?: any) {
         super(null);
     }
@@ -13,13 +15,11 @@ export default class Nil extends Monad<null> {
         return val instanceof Nil;
     }
 
-    static of(val?: any): Nil {
-        return new Nil(val);
+    static of(_?: any): Nil {
+        return Nil.NULL
     }
 
-    static from(val: any): Nil {
-        return Nil.isNil(val)
-            ? val
-            : Nil.of(val);
+    static from(_?: any): Nil {
+        return Nil.NULL
     }
 }

@@ -2,13 +2,12 @@ import {IConnectionConfig, IDriverConfig} from '../types';
 import {List, Num, Result} from '../monads';
 
 export enum DRIVER_RESULT_TYPE {
-    HEADER = 'HEADER',
     RECORD = 'RECORD',
     SUMMARY = 'FOOTER',
 }
 
 export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
-    auth: {
+    authToken: {
         scheme: 'basic',
         principal: 'neo4j',
         credentials: 'newpassword'
@@ -38,6 +37,7 @@ export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
 
 export const DEFAULT_DRIVER_CONFIG: IDriverConfig = {
     maxPoolSize: 1,
+    discoveryIntervalMs: 60 * 1000,
     connectionConfig: DEFAULT_CONNECTION_CONFIG,
     mapToResultHeader: (data: any) => data,
     mapToResult: (headerRecord: any, type: any, data: any) => Result.of({header: headerRecord, type, data: List.from(data)})
@@ -59,4 +59,14 @@ export enum DRIVER_HEADERS {
     SUCCESS = 0x70,
     RECORD = 0x71,
     FAILURE = 0x7F
+}
+
+export enum DBMS_MEMBER_ROLE {
+    LEADER = 'LEADER',
+    FOLLOWER = 'FOLLOWER'
+}
+
+export enum DBMS_DB_STATUS {
+    ONLINE = 'ONLINE',
+    OFFLINE = 'OFFLINE'
 }

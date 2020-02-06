@@ -1,4 +1,4 @@
-import {entries, join, map} from 'lodash';
+import {entries, join, map, reduce} from 'lodash';
 
 import Monad from '../monad';
 import {arrayHasItems} from '../../utils/array.utils';
@@ -61,5 +61,14 @@ export default class Dict<T = Monad<any>> extends Monad<RawDict<T>> {
 
     toString(): string {
         return `{${join(map([...this.original.entries()], ([key, val]) => `${key}: ${val}`), ', ')}}`;
+    }
+
+    toJSON(): any {
+        const asObj = reduce([...this.original.entries()], (agg, [key, val]) => ({
+            ...agg,
+            [key]: val
+        }), {});
+
+        return JSON.parse(JSON.stringify(asObj))
     }
 }

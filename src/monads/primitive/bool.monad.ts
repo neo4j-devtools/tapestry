@@ -1,6 +1,9 @@
 import Monad from '../monad';
 
 export default class Bool extends Monad<boolean> {
+    static TRUE = new Bool(true);
+    static FALSE = new Bool(false);
+
     constructor(value = false) {
         super(value);
     }
@@ -14,7 +17,9 @@ export default class Bool extends Monad<boolean> {
     }
 
     static of(val: any): Bool {
-        return new Bool(Boolean(val));
+        return Boolean(val)
+            ? Bool.TRUE
+            : Bool.FALSE;
     }
 
     static from(val: any): Bool {

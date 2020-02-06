@@ -114,8 +114,8 @@ function getMessageHeader(size: number, signature: number) {
 
 export function getAuthMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, params: IConnectionConfig<any>, packer?: Packer<T>) {
     const authParams = protocol >= BOLT_PROTOCOLS.V3
-        ? [{user_agent: params.userAgent, ...params.auth}]
-        : [params.userAgent, params.auth];
+        ? [{user_agent: params.userAgent, ...params.authToken}]
+        : [params.userAgent, params.authToken];
 
     return createMessage(
         protocol,

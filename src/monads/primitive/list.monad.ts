@@ -1,14 +1,9 @@
-import {join} from 'lodash';
+import {join, find, findIndex} from 'lodash';
 
 import Monad from '../monad';
 import Maybe from './maybe.monad';
 import Num from './num/num.monad';
 import None from './none.monad';
-
-/*
-type MaybeArrayItem<T> =
-    T extends Array<infer Element> ? Element : T;
-*/
 
 export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> {
     // @ts-ignore
@@ -93,6 +88,34 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
         const numToUse = Num.fromValue(index);
 
         return Maybe.of(this.original[numToUse.get()]);
+    }
+
+    find(val: T): Maybe<T> {
+        const found = find(this.original, (other) => val.equals(other));
+
+        return Maybe.of<T>(
+            val.isThis(found)
+                ? found
+                : None.EMPTY
+        )
+    }
+
+    reduce<R = any>(cb: (agg: R, next: T, index: number) => R, seed: R): R {
+       let result: R = seed;
+       let index = -1;
+
+       for (const item of this) {
+           index += 1;
+           result = cb(result, item, index)
+       }
+
+       return result;
+    }
+
+    indexOf(val: T): Num {
+        const found = findIndex(this.original, (other) => val.equals(other));
+
+        return Num.of(found);
     }
 
     slice<O extends Monad<any> = T>(from: Num | number, to?: Num | number): List<O> {
