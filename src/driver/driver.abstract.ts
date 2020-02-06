@@ -263,7 +263,7 @@ export default abstract class DriverBase<Rec = any> {
             request
         );
         const connectionPredicate = ({address}: Connection) => {
-            return !_.some(dbmsHosts, (host) => address === host.address);
+            return _.some(dbmsHosts, (host) => address === host.address);
         };
 
         if (!arrayHasItems(dbmsHosts)) {
@@ -288,7 +288,9 @@ export default abstract class DriverBase<Rec = any> {
             this.availableConnections.next(this.available);
         }
 
-        return this.availableConnections
+        return this.availableConnections.pipe(
+            skipWhile((connections) => !_.some(connections, connectionPredicate))
+        )
     }
 
     @boundMethod

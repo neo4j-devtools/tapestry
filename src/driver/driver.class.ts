@@ -148,7 +148,7 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
                 this.readySubject.complete();
             })
             .catch((err) => {
-                console.log(`Failed to perform discovery: ${err}`);
+                console.log('Failed to perform discovery', err);
 
                 return this.shutDown();
             })

@@ -20,7 +20,7 @@ import {Driver} from '.';
 
 const driver = new Driver({
     connectionConfig: {
-        auth: {
+        authToken: {
             scheme: 'basic',
             principal: 'neo4j',
             credentials: 'neo4j'
@@ -51,6 +51,7 @@ driver.query('RETURN $foo', {foo: true})
 ```
 
 ### Transactions
+Only for 4.X
 ```Typescript
 import {flatMap, tap} from 'rxjs';
 
@@ -95,6 +96,7 @@ async function getResults()  {
 ```
 
 ## Routing
+Only for 4.X
 ```TypeScript
 import {forkJoin} from 'rxjs';
 import {filter, reduce} from 'rxjs/operators';
