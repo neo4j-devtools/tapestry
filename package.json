@@ -11,7 +11,8 @@
         "test": "jest",
         "watch": "tsc -w",
         "dev": "npm run build && node ./dist/dev.js",
-        "build": "npm run clean && tsc"
+        "build": "npm run clean && tsc",
+        "prepare": "npm run build"
     },
     "author": "huboneo",
     "license": "MIT",
