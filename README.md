@@ -9,6 +9,7 @@ Help keep the dream alive!
     - [Queries](#queries)
     - [Transactions](#transactions)
     - [Routing](#routing)
+    - [Routing + Transactions](#routing--transactions)
 2. [Custom unpackers](#custom-unpackers)
 3. [Configuration](#configuration)
 
@@ -53,7 +54,7 @@ driver.query('RETURN $foo', {foo: true})
 ### Transactions
 Only for 4.X
 ```Typescript
-import {flatMap, tap} from 'rxjs';
+import {flatMap, tap} from 'rxjs/operators';
 
 import {Driver, Num} from '.';
 
@@ -130,6 +131,37 @@ result
     .then(console.log)
     .catch(console.error)
     .finally(driver.shutDown);
+```
+
+## Routing + Transactions
+Only for 4.X
+```TypeScript
+import {filter, reduce} from 'rxjs/operators';
+
+import {DBMS_MEMBER_ROLE, Driver, DRIVER_RESULT_TYPE, List, Result} from './index';
+
+const driver = new Driver<Result>({
+    useRouting: true,
+    maxPoolSize: 10
+});
+
+getResults()
+    .then(console.log)
+    .catch(console.error)
+    .finally(driver.shutDown)
+
+async function getResults()  {
+    // request WRITE transaction for db 'neo4j'
+    const tx = await driver.transaction({role: DBMS_MEMBER_ROLE.LEADER, db: 'neo4j'}).toPromise();
+    const q1 = await tx.query('CREATE (n {foo: $foo})', {foo: true}).pipe(
+       filter(({type}) => type === DRIVER_RESULT_TYPE.RECORD),
+       reduce((agg, next) => agg.concat(next), List.of<Result>([]))
+   ).toPromise();
+
+    await tx.commit().toPromise();
+
+    return q1;
+}
 ```
 
 ## Custom unpackers

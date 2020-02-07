@@ -55,23 +55,24 @@ export interface IClientMessage {
     additionalData?: (protocol: BOLT_PROTOCOLS) => any[]
 }
 
+export interface IRequestMeta {
+    db?: string,
+    role?: DBMS_MEMBER_ROLE
+}
+
 export interface IRequest {
     id: string;
-    role?: DBMS_MEMBER_ROLE,
-    db?: string,
     messages: IClientMessage[];
+    meta?: IRequestMeta
 }
 
-export interface IBaseMeta {
-    db?: string
-}
-
-export interface IRunQueryMeta extends IBaseMeta {
+export interface IQueryMeta extends IRequestMeta  {
     pullN?: number
 }
 
-export interface ITransactionMeta {
+export interface ITransaction {
     sessionId: string;
+    meta?: IRequestMeta;
 }
 
 export type DriverCommand = DRIVER_QUERY_COMMANDS | DRIVER_TRANSACTION_COMMANDS;

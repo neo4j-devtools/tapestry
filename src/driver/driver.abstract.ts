@@ -5,13 +5,14 @@ import {boundMethod} from 'autobind-decorator';
 import _ from 'lodash';
 
 import {
-    IBaseMeta,
     IClientMessage,
-    IConnectionConfig, IDBMSMember,
+    IConnectionConfig,
+    IDBMSMember,
     IDiscoveryTable,
     IDriverConfig,
+    IQueryMeta,
     IRequest,
-    IRunQueryMeta
+    IRequestMeta
 } from '../types';
 
 import {
@@ -34,7 +35,7 @@ export default abstract class DriverBase<Rec = any> {
     protected availableConnections: BehaviorSubject<Connection[]> = new BehaviorSubject<Connection[]>([]);
     protected requestQueue: Subject<IRequest> = new Subject();
     protected processing: Observable<[IRequest, Connection]> = this.requestQueue.pipe(
-        flatMap((request) => this.requestAvailableConnection(request).pipe(
+        flatMap((request) => this.requestAvailableConnection(request.meta).pipe(
             map((connections): [IRequest, Connection] => [request, connections[0]])
         )),
     );
@@ -54,35 +55,38 @@ export default abstract class DriverBase<Rec = any> {
         }
     }
 
-    @boundMethod
-    query<Res = Rec>(cypher: string, params: any = {}, meta: IRunQueryMeta = {}): Observable<Res> {
-        const {pullN = -1, db} = meta; // @todo: sessionId
+    //@boundMethod
+    query<Res = Rec>(cypher: string, params: any = {}, meta: IQueryMeta = {}): Observable<Res> {
+        const {pullN = -1, db} = meta; // @todo: transaction session ID
 
-        return this.sendMessages<Res>([
-            {
-                cmd: DRIVER_QUERY_COMMANDS.RUN,
-                data: [cypher, params],
-                additionalData: (protocol) => {
-                    if (protocol < BOLT_PROTOCOLS.V3) {
-                        return []
+        return this.sendMessages<Res>(
+            [
+                {
+                    cmd: DRIVER_QUERY_COMMANDS.RUN,
+                    data: [cypher, params],
+                    additionalData: (protocol) => {
+                        if (protocol < BOLT_PROTOCOLS.V3) {
+                            return []
+                        }
+
+                        return db && protocol > BOLT_PROTOCOLS.V3
+                            ? [{db}]
+                            : [{}];
                     }
-
-                    return db && protocol > BOLT_PROTOCOLS.V3
-                        ? [{db}]
-                        : [{}];
+                },
+                {
+                    cmd: DRIVER_QUERY_COMMANDS.PULL,
+                    data: [],
+                    additionalData: (protocol) => protocol >= BOLT_PROTOCOLS.V4
+                        ? [{n: pullN}]
+                        : []
                 }
-            },
-            {
-                cmd: DRIVER_QUERY_COMMANDS.PULL,
-                data: [],
-                additionalData: (protocol) => protocol >= BOLT_PROTOCOLS.V4
-                    ? [{n: pullN}]
-                    : []
-            }
-        ]);
+            ],
+            meta
+        );
     }
 
-    transaction<Res = Rec>(_: IBaseMeta = {}): Observable<DriverBase<Res>> {
+    transaction<Res = Rec>(_: IRequestMeta = {}): Observable<DriverBase<Res>> {
         throw new InvalidOperationError('Transaction pending');
     };
 
@@ -97,15 +101,15 @@ export default abstract class DriverBase<Rec = any> {
     abstract shutDown(): Promise<this>;
 
     @boundMethod
-    protected sendMessages<Res>(messages: IClientMessage[] = []): Observable<Res> {
+    protected sendMessages<Res>(messages: IClientMessage[] = [], meta?: IRequestMeta): Observable<Res> {
         return this.readySubject.pipe(
-            flatMap(() => this.getConnectionForRequest(messages)),
+            flatMap(() => this.getConnectionForRequest(messages, meta)),
             flatMap(([request, connection]) => this.executeRequests<Res>(request, connection))
         );
     }
 
     @boundMethod
-    protected getConnectionForRequest(messages: IClientMessage[] = []): Observable<[IRequest, Connection]> {
+    protected getConnectionForRequest(messages: IClientMessage[], meta?: IRequestMeta): Observable<[IRequest, Connection]> {
         if (this.isShutDown) {
             throw new InvalidOperationError('Driver is shut down');
         }
@@ -117,6 +121,7 @@ export default abstract class DriverBase<Rec = any> {
             this.requestQueue.next({
                 id: requestID,
                 messages,
+                meta,
             });
         });
 
@@ -255,12 +260,12 @@ export default abstract class DriverBase<Rec = any> {
     }
 
     @boundMethod
-    protected requestAvailableConnection(request: IRequest): Observable<Connection[]> {
+    protected requestAvailableConnection(meta?: IRequestMeta): Observable<Connection[]> {
         const dbmsHosts = determineConnectionHosts(
             this.connectionConfig,
             this.discoveryTables,
             this.connections,
-            request
+            meta
         );
         const connectionPredicate = ({address}: Connection) => {
             return _.some(dbmsHosts, (host) => address === host.address);

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import {IConnectionConfig, IDBMSMember, IDiscoveryTable, IRequest} from '../types';
+import {IConnectionConfig, IDBMSMember, IDiscoveryTable, IRequestMeta} from '../types';
 import {arrayHasItems} from '../utils/array.utils';
 import Connection from '../connection/connection.class';
 import {DBMS_DB_STATUS, DBMS_MEMBER_ROLE} from './driver.constants';
@@ -22,10 +22,10 @@ export function determineConnectionHosts(
     config: IConnectionConfig,
     tables: IDiscoveryTable[],
     connections: Connection[],
-    request?: IRequest
+    meta?: IRequestMeta
 ): IDBMSMember[] {
-    const desiredRole = request && request.role;
-    const desiredDB = request && request.db;
+    const desiredRole = meta && meta.role;
+    const desiredDB = meta && meta.db;
     const {host, port} = config;
     const defaultHost: IDBMSMember = {
         dbName: desiredDB || 'default',
@@ -41,7 +41,7 @@ export function determineConnectionHosts(
     }
 
     const existingByHost = _.groupBy(connections, 'address');
-    const availableHosts = _.uniqBy(_.map(tables, getDiscoveryTableHostAndPort), 'address');
+    const availableHosts = _.map(tables, getDiscoveryTableHostAndPort);
     const withCorrectPrerequisites = _.filter(availableHosts, ({dbName, role}) => {
         if (desiredRole && desiredRole !== role) {
             return false;

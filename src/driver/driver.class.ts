@@ -4,7 +4,14 @@ import uuid from 'uuid/v4';
 import {boundMethod} from 'autobind-decorator';
 import _ from 'lodash';
 
-import {IBaseMeta, IConnectionConfig, IDiscoveryTable, IDriverConfig, IRequest, ITransactionMeta} from '../types';
+import {
+    IConnectionConfig,
+    IDiscoveryTable,
+    IDriverConfig,
+    IRequest,
+    IRequestMeta,
+    ITransaction
+} from '../types';
 // only used internally
 import {Bool, List, Result, Str} from '../monads';
 
@@ -35,8 +42,9 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
     }
 
     @boundMethod
-    transaction<Res = Rec>(meta: IBaseMeta = {}): Observable<TransactionDriver<Res>> {
-        return this.getConnectionForRequest().pipe(
+    transaction<Res = Rec>(meta: IRequestMeta = {}): Observable<TransactionDriver<Res>> {
+        return this.readySubject.pipe(
+            flatMap( () => this.getConnectionForRequest([], meta)),
             flatMap(([, connection]) => this.beginTransaction(connection, meta)),
             // @todo: for all connections on same member
             map(([meta, connection]) => new TransactionDriver(meta, [connection], this.config, this.releaseConnection)),
@@ -68,7 +76,8 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
         ).toPromise();
     };
 
-    private beginTransaction(connection: Connection, meta: IBaseMeta = {}): Observable<[ITransactionMeta, Connection]> {
+    @boundMethod
+    private beginTransaction(connection: Connection, meta: IRequestMeta = {}): Observable<[ITransaction, Connection]> {
         const {db} = meta;
 
         return connection.sendMessage({
@@ -84,7 +93,7 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
                     : [{}];
             }
         }).pipe(
-            mapTo([{sessionId: uuid()}, connection])
+            mapTo([{sessionId: uuid(), meta}, connection])
         );
     }
 
