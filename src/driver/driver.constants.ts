@@ -40,7 +40,11 @@ export const DEFAULT_DRIVER_CONFIG: IDriverConfig = {
     discoveryIntervalMs: 60 * 1000,
     connectionConfig: DEFAULT_CONNECTION_CONFIG,
     mapToResultHeader: (data: any) => data,
-    mapToResult: (headerRecord: any, type: any, data: any) => Result.of({header: headerRecord, type, data: List.from(data)})
+    mapToResult: (headerRecord: any, type: any, data: any) => Result.of({
+        header: headerRecord,
+        type,
+        data: List.from(data)
+    })
 };
 
 export enum DRIVER_TRANSACTION_COMMANDS {
@@ -61,7 +65,7 @@ export enum DRIVER_HEADERS {
     FAILURE = 0x7F
 }
 
-export enum DBMS_MEMBER_ROLE {
+export enum DBMS_DB_ROLE {
     LEADER = 'LEADER',
     FOLLOWER = 'FOLLOWER'
 }

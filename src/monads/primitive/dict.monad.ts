@@ -69,6 +69,6 @@ export default class Dict<T = Monad<any>> extends Monad<RawDict<T>> {
             [key]: val
         }), {});
 
-        return JSON.parse(JSON.stringify(asObj))
+        return JSON.parse(JSON.stringify(asObj));
     }
 }

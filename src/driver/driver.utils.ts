@@ -3,7 +3,7 @@ import _ from 'lodash';
 import {IConnectionConfig, IDBMSMember, IDiscoveryTable, IRequestMeta} from '../types';
 import {arrayHasItems} from '../utils/array.utils';
 import Connection from '../connection/connection.class';
-import {DBMS_DB_STATUS, DBMS_MEMBER_ROLE} from './driver.constants';
+import {DBMS_DB_STATUS, DBMS_DB_ROLE} from './driver.constants';
 
 export function getDiscoveryTableHostAndPort({address, name, role, currentStatus}: IDiscoveryTable): IDBMSMember {
     const [host, port = 80] = address.get().split(':');
@@ -26,6 +26,7 @@ export function determineConnectionHosts(
 ): IDBMSMember[] {
     const desiredRole = meta && meta.role;
     const desiredDB = meta && meta.db;
+    const desiredAddress = meta && meta.address;
     const {host, port} = config;
     const defaultHost: IDBMSMember = {
         dbName: desiredDB || 'default',
@@ -33,7 +34,7 @@ export function determineConnectionHosts(
         port,
         address: `${host}:${port}`,
         currentStatus: DBMS_DB_STATUS.ONLINE,
-        role: DBMS_MEMBER_ROLE.LEADER
+        role: DBMS_DB_ROLE.LEADER
     };
 
     if (!arrayHasItems(tables)) {
@@ -42,12 +43,16 @@ export function determineConnectionHosts(
 
     const existingByHost = _.groupBy(connections, 'address');
     const availableHosts = _.map(tables, getDiscoveryTableHostAndPort);
-    const withCorrectPrerequisites = _.filter(availableHosts, ({dbName, role}) => {
+    const withCorrectPrerequisites = _.filter(availableHosts, ({address, dbName, role}) => {
         if (desiredRole && desiredRole !== role) {
             return false;
         }
 
         if (desiredDB && desiredDB !== dbName) {
+            return false;
+        }
+
+        if (desiredAddress && desiredAddress !== address) {
             return false;
         }
 
@@ -65,6 +70,6 @@ export function determineConnectionHosts(
     return _.filter(availableHosts, ({address}) => {
         const hostAddress = _.head(_.head(byAmountOfConnections));
 
-        return address === hostAddress
+        return address === hostAddress;
     });
 }

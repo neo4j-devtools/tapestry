@@ -16,10 +16,10 @@ export default class Nil extends Monad<null> {
     }
 
     static of(_?: any): Nil {
-        return Nil.NULL
+        return Nil.NULL;
     }
 
     static from(_?: any): Nil {
-        return Nil.NULL
+        return Nil.NULL;
     }
 }

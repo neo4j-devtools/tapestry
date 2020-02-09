@@ -10,7 +10,7 @@ export function JsonUnpacker(protocol: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_D
         default: {
             const {finalPos, data} = unpackerV1(protocol, dataType, view, size, pos, JsonUnpacker);
 
-            return {finalPos, data: JSON.parse(JSON.stringify(data))}
+            return {finalPos, data: JSON.parse(JSON.stringify(data))};
         }
     }
 }

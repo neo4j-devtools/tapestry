@@ -1,14 +1,12 @@
-import {forkJoin, Observable} from 'rxjs';
-import {filter, flatMap, map, mapTo, reduce, take} from 'rxjs/operators';
+import {forkJoin, Observable, of} from 'rxjs';
+import {filter, flatMap, map, mapTo, reduce, switchMapTo, take, tap} from 'rxjs/operators';
 import uuid from 'uuid/v4';
 import {boundMethod} from 'autobind-decorator';
 import _ from 'lodash';
 
 import {
-    IConnectionConfig,
     IDiscoveryTable,
     IDriverConfig,
-    IRequest,
     IRequestMeta,
     ITransaction
 } from '../types';
@@ -17,10 +15,9 @@ import {Bool, List, Result, Str} from '../monads';
 
 import {
     DBMS_DB_STATUS,
-    DBMS_MEMBER_ROLE,
+    DBMS_DB_ROLE,
     DEFAULT_CONNECTION_CONFIG,
     DEFAULT_DRIVER_CONFIG,
-    DRIVER_QUERY_COMMANDS,
     DRIVER_RESULT_TYPE,
     DRIVER_TRANSACTION_COMMANDS
 } from './driver.constants';
@@ -44,48 +41,48 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
     @boundMethod
     transaction<Res = Rec>(meta: IRequestMeta = {}): Observable<TransactionDriver<Res>> {
         return this.readySubject.pipe(
-            flatMap( () => this.getConnectionForRequest([], meta)),
+            flatMap(() => this.waitForConnection([], meta)),
             flatMap(([, connection]) => this.beginTransaction(connection, meta)),
-            // @todo: for all connections on same member
-            map(([meta, connection]) => new TransactionDriver(meta, [connection], this.config, this.releaseConnection)),
+            map(([transactionData, connection]) => this.createTransactionDriver<Res>(transactionData, connection)),
             take(1) // force complete
         );
     };
 
     @boundMethod
-    shutDown(): Promise<this> {
+    shutDown(): Observable<this> {
         if (this.isShutDown) {
-            return Promise.resolve(this);
+            return of(this);
         }
 
-        if (this.discoveryPoll) {
-            clearInterval(this.discoveryPoll);
+        return of(this).pipe(
+            tap(() => {
+                if (this.discoveryPoll) {
+                    clearInterval(this.discoveryPoll);
 
-            this.discoveryPoll = null;
-        }
+                    this.discoveryPoll = null;
+                }
 
-        const {connections} = this;
+                this.connections = [];
+                this.isShutDown = true;
 
-        this.connections = [];
-        this.isShutDown = true;
-
-        this.availableConnections.next([]);
-
-        return forkJoin(_.map(connections, (con) => con.terminate())).pipe(
+                this.availableConnections.next([]);
+            }),
+            switchMapTo(forkJoin(_.map(this.connections, (con) => con.terminate()))),
             mapTo(this)
-        ).toPromise();
+        );
     };
 
     @boundMethod
     private beginTransaction(connection: Connection, meta: IRequestMeta = {}): Observable<[ITransaction, Connection]> {
         const {db} = meta;
+        const sessionId = uuid();
 
         return connection.sendMessage({
             cmd: DRIVER_TRANSACTION_COMMANDS.BEGIN,
             data: [],
             additionalData: (protocol) => {
                 if (protocol < BOLT_PROTOCOLS.V3) {
-                    return []
+                    return [];
                 }
 
                 return db && protocol > BOLT_PROTOCOLS.V3
@@ -93,35 +90,75 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
                     : [{}];
             }
         }).pipe(
-            mapTo([{sessionId: uuid(), meta}, connection])
+            mapTo([{sessionId, meta}, connection])
+        );
+    }
+
+    @boundMethod
+    private createTransactionDriver<Res = Rec>(transactionData: ITransaction, initialConnection: Connection) {
+        const {meta, ...rest} = transactionData;
+        const isSession = initialConnection.protocol >= 10; // @todo: which protocol version for sessionId
+        const sane: ITransaction = isSession
+            ? {...rest, meta: {...meta, address: initialConnection.address}}
+            : {...rest, meta: _.omit(meta, 'address')};
+        const parentConnections = this.connectionSubject.pipe(
+            map((cons) => isSession
+                ? _.filter(cons, ({address}) => address === initialConnection.address)
+                : _.filter(cons, ({id}) => id === initialConnection.id)
+            )
+        );
+        const onComplete = <Res>(cmd: DRIVER_TRANSACTION_COMMANDS, data: ITransaction): Observable<Res> => {
+            const {sessionId, meta} = data;
+            const messages = [
+                isSession
+                    ? {
+                        cmd,
+                        data: [{sessionId}],
+                    }
+                    : {
+                        cmd,
+                        data: [{}]
+                    }
+            ];
+            const finale = isSession
+                ? this.sendMessages<Res>(messages, _.pick(meta, 'address'))
+                : this.executeRequests<Res>({id: uuid(), messages}, initialConnection);
+
+            return finale.pipe(
+                take(1) // @todo: just the first?
+            );
+        };
+
+        return new TransactionDriver<Res>(
+            sane,
+            parentConnections,
+            this,
+            this.config,
+            onComplete
         );
     }
 
     @boundMethod
     private runDiscovery() {
         // use our default type system for this call
-        const routingConfig: IConnectionConfig = _.merge(
-            _.omit(this.connectionConfig, ['packer', 'unpacker']),
-            _.pick(DEFAULT_CONNECTION_CONFIG, ['getResponseHeader', 'getResponseData']),
+        const routingConfig: IDriverConfig = _.merge(
+            {},
+            DEFAULT_DRIVER_CONFIG,
+            _.omit(this.config, ['mapToResultHeader', 'mapToResult']),
+            {
+                useRouting: false,
+                maxPoolSize: 1
+            },
+            {
+                connectionConfig: _.merge(
+                    _.omit(this.connectionConfig, ['packer', 'unpacker']),
+                    _.pick(DEFAULT_CONNECTION_CONFIG, ['getResponseHeader', 'getResponseData']),
+                )
+            }
         );
-        const routingConnection = this.createConnection(routingConfig);
-
+        const routingDriver = new Driver(routingConfig);
         // 4.X only for now
-        const routingRequest: IRequest = {
-            id: uuid(),
-            messages: [
-                {
-                    cmd: DRIVER_QUERY_COMMANDS.RUN,
-                    data: ['SHOW DATABASES', {}, {db: 'system'}]
-                },
-                {
-                    cmd: DRIVER_QUERY_COMMANDS.PULL,
-                    data: [{n: -1}]
-                }
-            ]
-        };
-
-        const result = this.executeRequests<Result>(routingRequest, routingConnection).pipe(
+        const result = routingDriver.query('SHOW DATABASES', {}, {db: 'system'}).pipe(
             filter(({type}) => type === DRIVER_RESULT_TYPE.RECORD),
             reduce((agg, next) => agg.concat(next), List.of<Result>([])),
             map((results) => results.reduce<IDiscoveryTable[]>((agg, next) => [
@@ -134,8 +171,8 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
                         : Str.of(DBMS_DB_STATUS.OFFLINE)
                     ),
                     role: next.getFieldData('role').flatMap((val) => val.equals(Str.of('follower'))
-                        ? Str.of(DBMS_MEMBER_ROLE.FOLLOWER)
-                        : Str.of(DBMS_MEMBER_ROLE.LEADER)
+                        ? Str.of(DBMS_DB_ROLE.FOLLOWER)
+                        : Str.of(DBMS_DB_ROLE.LEADER)
                     ),
                     isDefault: next.getFieldData('default').getOrElse(Bool.FALSE),
                 }
@@ -155,13 +192,16 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
                 // signal ready to send messages
                 this.readySubject.next();
                 this.readySubject.complete();
+
+                return routingDriver.shutDown().toPromise();
             })
             .catch((err) => {
-                console.log('Failed to perform discovery', err);
+                console.error('Failed to perform discovery', err);
 
-                return this.shutDown();
-            })
-            .finally(routingConnection.terminate)
+                return Promise.all([
+                    this.shutDown().toPromise(),
+                    routingDriver.shutDown().toPromise()
+                ]);
+            });
     }
 }
-

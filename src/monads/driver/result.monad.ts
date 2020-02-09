@@ -26,7 +26,7 @@ export default class Result<Data extends Monad<any> = Monad<any>, Header extends
             List.isList<Str>(val)
                 ? val
                 : List.of<Str>([])
-        )
+        );
     }
 
     getFieldData(field: Str | string): Maybe<Data> {
@@ -35,7 +35,7 @@ export default class Result<Data extends Monad<any> = Monad<any>, Header extends
         return this.fields.indexOf(key).switchMap((val) => val.lessThan(Num.ZERO)
             ? Maybe.of<Data>()
             : this.data.getIndex(val)
-        )
+        );
     }
 
     static isResult<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>>(val: any): val is Result<Data, Header> {

@@ -97,19 +97,19 @@ export default class List<T extends Monad<any> = Monad<any>> extends Monad<T[]> 
             val.isThis(found)
                 ? found
                 : None.EMPTY
-        )
+        );
     }
 
     reduce<R = any>(cb: (agg: R, next: T, index: number) => R, seed: R): R {
-       let result: R = seed;
-       let index = -1;
+        let result: R = seed;
+        let index = -1;
 
-       for (const item of this) {
-           index += 1;
-           result = cb(result, item, index)
-       }
+        for (const item of this) {
+            index += 1;
+            result = cb(result, item, index);
+        }
 
-       return result;
+        return result;
     }
 
     indexOf(val: T): Num {

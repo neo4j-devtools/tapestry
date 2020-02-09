@@ -14,7 +14,7 @@ export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     static EMPTY = UnboundRelationship.of({});
 
     get isEmpty(): boolean {
-        return false
+        return false;
     }
 
     get hasProperties() {

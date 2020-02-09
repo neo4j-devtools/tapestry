@@ -20,7 +20,7 @@ export default class Monad<T extends any> implements IMonad<T> {
 
     constructor(protected readonly original: T) {
         // @ts-ignore
-        this.alreadyIterable = original != null && typeof original !== "string" && typeof original[Symbol.iterator] === 'function';
+        this.alreadyIterable = original != null && typeof original !== 'string' && typeof original[Symbol.iterator] === 'function';
         // @ts-ignore
         this.iterableValue = this.alreadyIterable
             ? original

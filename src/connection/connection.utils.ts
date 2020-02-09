@@ -60,7 +60,7 @@ function getCommandForProtocol(protocol: BOLT_PROTOCOLS, cmd: DriverCommand): nu
                 return V3_BOLT_MESSAGES[cmd];
 
             default: {
-                throw new InvalidOperationError(`Protocol ${protocol} does not support transactions`)
+                throw new InvalidOperationError(`Protocol ${protocol} does not support transactions`);
             }
         }
     }
@@ -106,10 +106,10 @@ export function createMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, cmd
 
 function getMessageHeader(size: number, signature: number) {
     if (size < 0x10) {
-        return [HEADER_SIZE_LIMITS.TINY_STRUCT | size, signature]
+        return [HEADER_SIZE_LIMITS.TINY_STRUCT | size, signature];
     }
 
-    throw new Error('Messages of size ' + size + ' are not supported')
+    throw new Error('Messages of size ' + size + ' are not supported');
 }
 
 export function getAuthMessage<T extends any = any>(protocol: BOLT_PROTOCOLS, params: IConnectionConfig<any>, packer?: Packer<T>) {

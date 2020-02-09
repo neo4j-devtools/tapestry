@@ -39,8 +39,12 @@ const driver = new Driver({});
 // Reactive
 driver.query('RETURN $foo', {foo: true}).subscribe({
     next: console.log,
-    complete: driver.shutDown,
-    error: driver.shutDown
+    complete: () => driver.shutDown().toPromise(),
+    error: (err) => {
+        console.error(err);
+        
+        driver.shutDown().toPromise();
+    }
 })
 
 // Promise
@@ -48,37 +52,39 @@ driver.query('RETURN $foo', {foo: true})
     .toPromise()
     .then(console.log)
     .catch(console.error)
-    .finally(driver.shutDown);
+    .finally(() => driver.shutDown().toPromise());
 ```
 
 ### Transactions
 Only for 4.X
 ```Typescript
-import {flatMap, tap} from 'rxjs/operators';
+import {flatMap, reduce, tap} from 'rxjs/operators';
 
-import {Driver, Num} from '.';
+import {Driver, List, Num, Result} from '.';
 
-const driver = new Driver({});
+const driver = new Driver<Result>({});
 
 // Reactive
 driver.transaction().pipe(
     flatMap((tx) => tx.query('CREATE (n {foo: $foo}) RETURN n', {foo: true}).pipe(
-        tap(({data}) => data.length.greaterThan(Num.ZERO)
-            ? tx.commit()
-            : tx.rollback()
-        )
+        reduce((agg, next) => agg.concat(next), List.of<Result>([])),
+        tap(() => tx.rollback().toPromise())
     ))
 ).subscribe({
     next: console.log,
-    complete: driver.shutDown,
-    error: driver.shutDown
+    complete: () => driver.shutDown().toPromise(),
+    error: (err) => {
+        console.error(err);
+
+        driver.shutDown().toPromise();
+    }
 });
 
 // Promise
 getResults()
     .then(console.log)
     .catch(console.error)
-    .finally(driver.shutDown)
+    .finally(() => driver.shutDown().toPromise())
 
 async function getResults()  {
     const tx = await driver.transaction().toPromise();
@@ -103,7 +109,7 @@ import {forkJoin} from 'rxjs';
 import {filter, reduce} from 'rxjs/operators';
 import _ from 'lodash'
 
-import {Driver, DRIVER_RESULT_TYPE, List, Result} from './index';
+import {Driver, DRIVER_RESULT_TYPE, List, Result} from '.';
 
 const driver = new Driver<Result>({
     useRouting: true,
@@ -120,8 +126,12 @@ const result = forkJoin(_.map(Array(10), () => query));
 
 result.subscribe({
     next: console.log,
-    error: console.error,
-    complete: driver.shutDown
+    complete: () => driver.shutDown().toPromise(),
+    error: (err) => {
+        console.error(err);
+
+        driver.shutDown().toPromise();
+    }
 })
 
 // Promise
@@ -130,7 +140,7 @@ const result = Promise.all(_.map(Array(10), () => query.toPromise()));
 result
     .then(console.log)
     .catch(console.error)
-    .finally(driver.shutDown);
+    .finally(() => driver.shutDown().toPromise())
 ```
 
 ## Routing + Transactions
@@ -138,7 +148,7 @@ Only for 4.X
 ```TypeScript
 import {filter, reduce} from 'rxjs/operators';
 
-import {DBMS_MEMBER_ROLE, Driver, DRIVER_RESULT_TYPE, List, Result} from './index';
+import {DBMS_DB_ROLE, Driver, DRIVER_RESULT_TYPE, List, Result} from '.';
 
 const driver = new Driver<Result>({
     useRouting: true,
@@ -148,12 +158,12 @@ const driver = new Driver<Result>({
 getResults()
     .then(console.log)
     .catch(console.error)
-    .finally(driver.shutDown)
+    .finally(() => driver.shutDown().toPromise())
 
 async function getResults()  {
     // request WRITE transaction for db 'neo4j'
-    const tx = await driver.transaction({role: DBMS_MEMBER_ROLE.LEADER, db: 'neo4j'}).toPromise();
-    const q1 = await tx.query('CREATE (n {foo: $foo})', {foo: true}).pipe(
+    const tx = await driver.transaction({role: DBMS_DB_ROLE.LEADER, db: 'neo4j'}).toPromise();
+    const q1 = await tx.query('CREATE (n {foo: $foo}) RETURN n', {foo: true}).pipe(
        filter(({type}) => type === DRIVER_RESULT_TYPE.RECORD),
        reduce((agg, next) => agg.concat(next), List.of<Result>([]))
    ).toPromise();
@@ -185,8 +195,12 @@ driver.query('MATCH (n) RETURN n')
         reduce((agg, next) => agg.concat(next), [])
     ).subscribe({
         next: console.log,
-        complete: driver.shutDown,
-        error: driver.shutDown
+        complete: () => driver.shutDown().toPromise(),
+        error: (err) => {
+            console.error(err);
+            
+            driver.shutDown().toPromise();
+        }
     })
 ```
 

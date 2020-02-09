@@ -1,6 +1,6 @@
 import {
     DBMS_DB_STATUS,
-    DBMS_MEMBER_ROLE,
+    DBMS_DB_ROLE,
     DRIVER_HEADERS,
     DRIVER_QUERY_COMMANDS,
     DRIVER_RESULT_TYPE,
@@ -57,7 +57,8 @@ export interface IClientMessage {
 
 export interface IRequestMeta {
     db?: string,
-    role?: DBMS_MEMBER_ROLE
+    address?: string,
+    role?: DBMS_DB_ROLE
 }
 
 export interface IRequest {
@@ -66,12 +67,12 @@ export interface IRequest {
     meta?: IRequestMeta
 }
 
-export interface IQueryMeta extends IRequestMeta  {
+export interface IQueryMeta extends IRequestMeta {
     pullN?: number
 }
 
 export interface ITransaction {
-    sessionId: string;
+    sessionId: string; // @todo: real name for sessionId?
     meta?: IRequestMeta;
 }
 
@@ -81,13 +82,13 @@ export interface IDiscoveryTable {
     name: Str;
     address: Str;
     currentStatus: Str<DBMS_DB_STATUS>;
-    role: Str<DBMS_MEMBER_ROLE>;
+    role: Str<DBMS_DB_ROLE>;
     isDefault: Bool
 }
 
 export type IDBMSMember = {
     dbName: string,
-    role: DBMS_MEMBER_ROLE,
+    role: DBMS_DB_ROLE,
     host: string,
     port: number,
     currentStatus: DBMS_DB_STATUS,

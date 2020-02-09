@@ -13,7 +13,7 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
     public readonly id = uuid();
 
     protected readonly socket: WebSocket;
-    protected protocol: BOLT_PROTOCOLS = BOLT_PROTOCOLS.UNKNOWN;
+    protected ourProtocol: BOLT_PROTOCOLS = BOLT_PROTOCOLS.UNKNOWN;
     protected didAuth: boolean = false;
     protected incomingData = new ArrayBuffer(0);
     protected readySubject = new AsyncSubject<void>();
@@ -37,8 +37,12 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
         return `${this.config.host}:${this.config.port}`;
     }
 
+    public get protocol() {
+        return this.ourProtocol;
+    }
+
     private get didHandshake() {
-        return this.protocol !== BOLT_PROTOCOLS.UNKNOWN;
+        return this.ourProtocol !== BOLT_PROTOCOLS.UNKNOWN;
     }
 
     private get isReady() {
@@ -56,13 +60,13 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
             map(() => {
                 const {cmd, data, additionalData} = message;
                 const allData = additionalData
-                    ? [...data, ...additionalData(this.protocol)]
+                    ? [...data, ...additionalData(this.ourProtocol)]
                     : [...data];
 
-                this.socket.send(createMessage<Data>(this.protocol, cmd, allData, this.config.packer));
+                this.socket.send(createMessage<Data>(this.ourProtocol, cmd, allData, this.config.packer));
             }),
             switchMap(() => this)
-        )
+        );
     }
 
     @boundMethod
@@ -77,10 +81,10 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
 
         return this.terminationSubject.pipe(
             map(() => {
-                this.socket.close()
+                this.socket.close();
             }),
             mapTo(this)
-        // @todo: not very graceful
+            // @todo: not very graceful
         ).toPromise();
     }
 
@@ -123,7 +127,7 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
 
     @boundMethod
     private onChunk(view: DataView) {
-        const {data} = unpackResponseData<Data>(this.protocol, view, this.config.unpacker);
+        const {data} = unpackResponseData<Data>(this.ourProtocol, view, this.config.unpacker);
 
         this.next({
             // @todo: cleanup
@@ -134,9 +138,9 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
 
     @boundMethod
     private onHandshake(data: DataView) {
-        this.protocol = data.getInt32(0, false);
+        this.ourProtocol = data.getInt32(0, false);
 
-        this.socket.send(getAuthMessage(this.protocol, this.config, this.config.packer));
+        this.socket.send(getAuthMessage(this.ourProtocol, this.config, this.config.packer));
     }
 
     @boundMethod

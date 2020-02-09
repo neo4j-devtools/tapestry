@@ -36,6 +36,6 @@ export default class Maybe<T = Monad<any>> extends Monad<T | None<T>> {
     }
 
     toString(): string {
-        return `${this.constructor.name} {${this.original}}}`
+        return `${this.constructor.name} {${this.original}}}`;
     }
 }

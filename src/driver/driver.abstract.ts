@@ -27,24 +27,28 @@ import {InvalidOperationError} from '../errors';
 import {determineConnectionHosts} from './driver.utils';
 
 export default abstract class DriverBase<Rec = any> {
+    protected isReady = false;
+    protected isShutDown = false;
+    protected isSlave = false;
     protected discoveryTables: IDiscoveryTable[] = [];
-    protected readonly connectionConfig: IConnectionConfig;
     protected connections: Connection[] = [];
     protected available: Connection[] = [];
-    protected readySubject = new AsyncSubject<void>();
-    protected availableConnections: BehaviorSubject<Connection[]> = new BehaviorSubject<Connection[]>([]);
-    protected requestQueue: Subject<IRequest> = new Subject();
-    protected processing: Observable<[IRequest, Connection]> = this.requestQueue.pipe(
+    protected readonly connectionConfig: IConnectionConfig;
+    protected readonly connectionSubject: BehaviorSubject<Connection[]> = new BehaviorSubject<Connection[]>([]);
+    protected readonly readySubject = new AsyncSubject<void>();
+    protected readonly availableConnections: BehaviorSubject<Connection[]> = new BehaviorSubject<Connection[]>([]);
+    protected readonly requestQueue: Subject<IRequest> = new Subject();
+    protected readonly processing: Observable<[IRequest, Connection]> = this.requestQueue.pipe(
         flatMap((request) => this.requestAvailableConnection(request.meta).pipe(
             map((connections): [IRequest, Connection] => [request, connections[0]])
         )),
     );
-    protected isReady = false;
-    protected isShutDown = false;
-    protected isBound = false;
 
     constructor(protected readonly config: IDriverConfig) {
         this.connectionConfig = _.merge({}, DEFAULT_CONNECTION_CONFIG, this.config.connectionConfig);
+
+        // @boundMethod does not like inheritance
+        this.query = this.query.bind(this);
 
         if (!this.config.useRouting) {
             this.isReady = true;
@@ -55,7 +59,7 @@ export default abstract class DriverBase<Rec = any> {
         }
     }
 
-    //@boundMethod
+    // @boundMethod does not like inheritance
     query<Res = Rec>(cypher: string, params: any = {}, meta: IQueryMeta = {}): Observable<Res> {
         const {pullN = -1, db} = meta; // @todo: transaction session ID
 
@@ -66,7 +70,7 @@ export default abstract class DriverBase<Rec = any> {
                     data: [cypher, params],
                     additionalData: (protocol) => {
                         if (protocol < BOLT_PROTOCOLS.V3) {
-                            return []
+                            return [];
                         }
 
                         return db && protocol > BOLT_PROTOCOLS.V3
@@ -90,26 +94,26 @@ export default abstract class DriverBase<Rec = any> {
         throw new InvalidOperationError('Transaction pending');
     };
 
-    commit() {
+    commit<Res = Rec>(): Observable<Res> {
         throw new InvalidOperationError('No transaction pending');
     }
 
-    rollback() {
+    rollback<Res = Rec>(): Observable<Res> {
         throw new InvalidOperationError('No transaction pending');
     }
 
-    abstract shutDown(): Promise<this>;
+    abstract shutDown(): Observable<this>;
 
     @boundMethod
     protected sendMessages<Res>(messages: IClientMessage[] = [], meta?: IRequestMeta): Observable<Res> {
         return this.readySubject.pipe(
-            flatMap(() => this.getConnectionForRequest(messages, meta)),
+            flatMap(() => this.waitForConnection(messages, meta)),
             flatMap(([request, connection]) => this.executeRequests<Res>(request, connection))
         );
     }
 
     @boundMethod
-    protected getConnectionForRequest(messages: IClientMessage[], meta?: IRequestMeta): Observable<[IRequest, Connection]> {
+    protected waitForConnection(messages: IClientMessage[], meta?: IRequestMeta): Observable<[IRequest, Connection]> {
         if (this.isShutDown) {
             throw new InvalidOperationError('Driver is shut down');
         }
@@ -130,7 +134,6 @@ export default abstract class DriverBase<Rec = any> {
             take(1),
             tap(([, connection]) => this.occupyConnection(connection)),
         );
-
     }
 
     @boundMethod
@@ -277,8 +280,8 @@ export default abstract class DriverBase<Rec = any> {
 
         const validAvailable = _.filter(this.available, connectionPredicate);
 
-        if (this.isBound || arrayHasItems(validAvailable)) {
-            return this.availableConnections
+        if (this.isSlave || arrayHasItems(validAvailable)) {
+            return this.availableConnections;
         }
 
         if (this.connections.length < this.config.maxPoolSize) {
@@ -290,12 +293,13 @@ export default abstract class DriverBase<Rec = any> {
             ];
 
             this.releaseConnection(connection);
+            this.connectionSubject.next(this.connections);
             this.availableConnections.next(this.available);
         }
 
         return this.availableConnections.pipe(
             skipWhile((connections) => !_.some(connections, connectionPredicate))
-        )
+        );
     }
 
     @boundMethod
@@ -303,6 +307,7 @@ export default abstract class DriverBase<Rec = any> {
         this.occupyConnection(connection);
 
         this.connections = _.filter(this.connections, ({id}) => id !== connection.id);
+        this.connectionSubject.next(this.connections);
 
         return connection.terminate();
     }

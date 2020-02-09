@@ -1,5 +1,4 @@
-import {Observable, of} from 'rxjs';
-import {mapTo, tap} from 'rxjs/operators';
+import {Observable, of, Subscription} from 'rxjs';
 import {boundMethod} from 'autobind-decorator';
 import _ from 'lodash';
 
@@ -8,83 +7,79 @@ import {IDriverConfig, IQueryMeta, ITransaction} from '../types';
 import {DRIVER_TRANSACTION_COMMANDS} from './driver.constants';
 import {Connection} from '../connection';
 import DriverBase from './driver.abstract';
+import {tap} from 'rxjs/operators';
 
-type TransactionCallback = (connection: Connection) => Connection;
+type TransactionCallback = <Res = any>(cmd: DRIVER_TRANSACTION_COMMANDS, transaction: ITransaction) => Observable<Res>;
 
 export default class TransactionDriver<Rec = any> extends DriverBase<Rec> {
-    // @ts-ignore
     private readonly transactionData: ITransaction;
     private readonly onComplete: TransactionCallback;
+    private readonly parentDriver: DriverBase<Rec>;
+    private readonly parentSubscription: Subscription;
 
-    constructor(transactionData: ITransaction, connections: Connection[], config: IDriverConfig, onComplete: TransactionCallback) {
+    private get isSession() {
+        return _.has(this.transactionData, 'meta.address');
+    }
+
+    constructor(transactionData: ITransaction, connections: Observable<Connection[]>, parent: DriverBase<Rec>, config: IDriverConfig, onComplete: TransactionCallback) {
         const boundConfig: IDriverConfig = {
             ...config,
-            maxPoolSize: 1,
             useRouting: false
         };
 
         super(boundConfig);
 
+        this.parentDriver = parent;
         this.onComplete = onComplete;
-        this.isBound = true;
+        this.isSlave = true;
         this.transactionData = transactionData;
-        this.connections = connections;
 
-        _.forEach(connections, this.releaseConnection);
+        this.parentSubscription = connections.subscribe({
+            next: (conns) => {
+                const newConnections = _.filter(conns, (c) => !_.some(this.connections, ({id}) => c.id === id));
+                this.connections = conns;
 
-        /* @todo: or already handled by lexical in addConnection?
-        connections.subscribe({
-            complete: this.shutDown,
+                _.forEach(newConnections, this.releaseConnection);
+            },
             error: this.shutDown
         });
-        */
     }
 
+    // @boundMethod does not like inheritance
     query<Res = Rec>(cypher: string, params: any = {}, meta: IQueryMeta = {}): Observable<Res> {
-        const combined = _.assign({}, meta, this.transactionData.meta);
+        if (this.isSession) {
+            const combinedMeta = _.assign({}, meta, _.omit(this.transactionData, 'meta'));
 
-        return super.query(cypher, params, combined);
+            return this.parentDriver.query(cypher, params, combinedMeta);
+        }
+
+        return super.query(cypher, params, meta);
     }
 
     @boundMethod
-    shutDown(): Promise<this> {
+    shutDown(): Observable<this> {
         if (this.isShutDown) {
-            return Promise.resolve(this);
+            return of(this);
         }
 
-        this.isShutDown = true;
-
-        return of(_.map(this.connections, this.onComplete)).pipe(
-            mapTo(this)
-        ).toPromise();
+        return of(this).pipe(
+            tap(() => {
+                this.isShutDown = true;
+                this.parentSubscription.unsubscribe();
+            })
+        );
     };
 
     @boundMethod
     commit<Res = Rec>(): Observable<Res> {
-        return this.sendMessages<Res>(
-            [
-                {
-                    cmd: DRIVER_TRANSACTION_COMMANDS.COMMIT,
-                    data: [{}] // @todo: sessionId
-                },
-            ],
-            this.transactionData.meta
-        ).pipe(
+        return this.onComplete<Res>(DRIVER_TRANSACTION_COMMANDS.COMMIT, this.transactionData).pipe(
             tap(this.shutDown)
         );
     }
 
     @boundMethod
     rollback<Res = Rec>(): Observable<Res> {
-        return this.sendMessages<Res>(
-            [
-                {
-                    cmd: DRIVER_TRANSACTION_COMMANDS.ROLLBACK,
-                    data: [{}] // @todo: sessionId
-                },
-            ],
-            this.transactionData.meta
-        ).pipe(
+        return this.onComplete<Res>(DRIVER_TRANSACTION_COMMANDS.ROLLBACK, this.transactionData).pipe(
             tap(this.shutDown)
         );
     }
