@@ -1,8 +1,8 @@
 {
     "name": "tapestry",
     "version": "1.0.0",
-    "description": "TBA",
-    "keywords": [],
+    "description": "Unofficial Neo4j Reactive driver with a monadic type system",
+    "keywords": ["unofficial","neo4j", "driver", "cypher"],
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "repository": "https://github.com/huboneo/tapestry",
@@ -15,7 +15,7 @@
         "prepare": "npm run build"
     },
     "author": "huboneo",
-    "license": "MIT",
+    "license": "GPL-3.0",
     "devDependencies": {
         "@types/jest": "24.0.18",
         "@types/lodash": "4.14.149",
