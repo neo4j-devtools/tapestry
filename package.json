@@ -2,7 +2,12 @@
     "name": "tapestry",
     "version": "1.0.0",
     "description": "Unofficial Neo4j Reactive driver with a monadic type system",
-    "keywords": ["unofficial","neo4j", "driver", "cypher"],
+    "keywords": [
+        "unofficial",
+        "neo4j",
+        "driver",
+        "cypher"
+    ],
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "repository": "https://github.com/huboneo/tapestry",

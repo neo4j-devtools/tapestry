@@ -21,6 +21,7 @@ import {
     DRIVER_RESULT_TYPE,
     DRIVER_TRANSACTION_COMMANDS
 } from './driver.constants';
+import logger from '../utils/logger';
 import {BOLT_PROTOCOLS, Connection} from '../connection';
 import DriverBase from './driver.abstract';
 import TransactionDriver from './transaction-driver.class';
@@ -196,7 +197,7 @@ export default class Driver<Rec = any> extends DriverBase<Rec> {
                 return routingDriver.shutDown().toPromise();
             })
             .catch((err) => {
-                console.error('Failed to perform discovery', err);
+                logger(['Failed to perform discovery', err], 'error');
 
                 return Promise.all([
                     this.shutDown().toPromise(),

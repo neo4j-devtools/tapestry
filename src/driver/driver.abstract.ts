@@ -25,6 +25,7 @@ import {arrayHasItems} from '../utils/array.utils';
 import {BOLT_PROTOCOLS, Connection} from '../connection';
 import {InvalidOperationError} from '../errors';
 import {determineConnectionHosts} from './driver.utils';
+import logger from '../utils/logger';
 
 export default abstract class DriverBase<Rec = any> {
     protected isReady = false;
@@ -138,8 +139,8 @@ export default abstract class DriverBase<Rec = any> {
 
     @boundMethod
     protected executeRequests<Res>(request: IRequest, connection: Connection): Observable<Res> {
-        console.log('exec', request.id);
-        console.time(request.id);
+        logger(['exec', request.id]);
+        logger([request.id], 'time');
 
         _.forEach(request.messages, (query) => {
             connection.sendMessage(query).toPromise();
@@ -159,7 +160,7 @@ export default abstract class DriverBase<Rec = any> {
 
                         subscriber.error(data);
                         this.releaseConnection(connection);
-                        console.timeEnd(request.id);
+                        logger([request.id], 'timeEnd');
 
                         return;
                     }
@@ -192,8 +193,8 @@ export default abstract class DriverBase<Rec = any> {
                     }
 
                     if (remaining === 0) {
-                        console.log('complete', request.id);
-                        console.timeEnd(request.id);
+                        logger([request.id]);
+                        logger([request.id], 'timeEnd');
                         subscriber.complete();
                         this.releaseConnection(connection);
                     }
@@ -201,7 +202,7 @@ export default abstract class DriverBase<Rec = any> {
                 error: (err) => {
                     remaining = 0;
 
-                    console.timeEnd(request.id);
+                    logger([request.id], 'timeEnd');
                     subscriber.error(err);
                 }
             });
