@@ -8,7 +8,7 @@ import Str from './str.monad';
 export type RawDict<T = Monad<any>> = Map<string, T>
 
 export default class Dict<T = Monad<any>> extends Monad<RawDict<T>> {
-    private readonly keys: readonly Str[];
+    protected readonly keys: readonly Str[];
 
     constructor(val: RawDict<T>) {
         super(val);

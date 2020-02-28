@@ -156,13 +156,14 @@ export default abstract class DriverBase<Rec = any> {
                     const {header, data} = message;
 
                     if (header === DRIVER_HEADERS.FAILURE) {
-                        remaining = 0;
+                        remaining -= 1;
 
-                        subscriber.error(data);
-                        this.releaseConnection(connection);
-                        logger([request.id], 'timeEnd');
-
-                        return;
+                        // @todo: cleanup
+                        subscriber.next(this.config.mapToResult(
+                            headerRecord,
+                            DRIVER_RESULT_TYPE.FAILURE,
+                            data
+                        ));
                     }
 
                     if (headerRecord && header === DRIVER_HEADERS.SUCCESS) {

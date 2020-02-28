@@ -3,6 +3,7 @@ import {List, Num, Result} from '../monads';
 
 export enum DRIVER_RESULT_TYPE {
     RECORD = 'RECORD',
+    FAILURE = 'FAILURE',
     SUMMARY = 'FOOTER',
 }
 
