@@ -3,11 +3,12 @@ import {map, mapTo, switchMap, takeUntil} from 'rxjs/operators';
 import {boundMethod} from 'autobind-decorator';
 import uuid from 'uuid/v4';
 
-import {IConnectionConfig, IClientMessage, IServerMessage} from '../types';
+import {IClientMessage, IConnectionConfig, IServerMessage} from '../types';
 import {unpackResponseData} from '../packstream';
 import {createMessage, getAuthMessage, getHandshakeMessage, joinArrayBuffers} from './connection.utils';
 import {BOLT_PROTOCOLS} from './connection.constants';
-import {InvalidOperationError} from '../errors';
+import {AuthenticationError, InvalidOperationError} from '../errors';
+import {DRIVER_HEADERS} from '../driver';
 
 export default class Connection<Data extends any = any> extends Subject<IServerMessage<Data>> {
     public readonly id = uuid();
@@ -95,7 +96,7 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
 
     @boundMethod
     private onClose() {
-        this.complete();
+        this.terminate().then(() => this.complete());
     }
 
     @boundMethod
@@ -129,11 +130,17 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
     private onChunk(view: DataView) {
         const {data} = unpackResponseData<Data>(this.ourProtocol, view, this.config.unpacker);
 
-        this.next({
-            // @todo: cleanup
-            header: this.config.getResponseHeader!(data),
-            data: this.config.getResponseData!(data)
-        });
+        if (this.isReady) {
+            this.next({
+                // @todo: cleanup
+                header: this.config.getResponseHeader!(data),
+                data: this.config.getResponseData!(data)
+            });
+
+            return;
+        }
+
+        this.onAuth(data);
     }
 
     @boundMethod
@@ -144,7 +151,16 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
     }
 
     @boundMethod
-    private onAuth(_: DataView) {
+    private onAuth(data: Data) {
+        // @todo: cleanup
+        const result = this.config.getResponseHeader!(data);
+
+        if (result !== DRIVER_HEADERS.SUCCESS) {
+            this.error(new AuthenticationError(`${this.config.getResponseData!(data)}`));
+
+            return;
+        }
+
         this.didAuth = true;
 
         // signal ready to send messages
@@ -157,16 +173,9 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
         // @ts-ignore
         const data = new DataView(event.data);
 
-        if (this.isReady) {
-            this.onData(data);
-
-            return;
-        }
-
         if (this.didHandshake) {
-            this.onAuth(data);
-
-            return;
+            this.onData(data);
+            return
         }
 
         this.onHandshake(data);
@@ -174,6 +183,6 @@ export default class Connection<Data extends any = any> extends Subject<IServerM
 
     @boundMethod
     private onError(err: any) {
-        this.error(err);
+        this.terminate().then(() => this.error(err));
     }
 }
