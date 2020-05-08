@@ -1,6 +1,6 @@
 {
     "name": "@huboneo/tapestry",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "Unofficial Neo4j Reactive driver with a monadic type system",
     "keywords": [
         "unofficial",
