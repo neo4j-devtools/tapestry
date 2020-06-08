@@ -8,6 +8,5 @@ if (!has(global, 'WebSocket')) {
 
 export * from './driver';
 export * from './connection';
-export * from './monads';
 export * from './types';
 export * from './packstream';

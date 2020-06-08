@@ -1,4 +1,5 @@
-import {Driver, DRIVER_RESULT_TYPE, List, Result} from '.';
+import {Driver, DRIVER_RESULT_TYPE} from '.';
+import {List, Result} from './monads';
 import {filter, reduce} from 'rxjs/operators';
 
 const driver = new Driver<Result>({
