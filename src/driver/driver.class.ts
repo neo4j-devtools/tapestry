@@ -11,7 +11,8 @@ import {
     ITransaction
 } from '../types';
 // only used internally
-import {Bool, List, Result, Str} from '../monads';
+import {Bool, List, Str} from '@relate/types';
+import {Result} from '../monads';
 
 import {
     DBMS_DB_STATUS,

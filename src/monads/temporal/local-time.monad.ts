@@ -1,15 +1,17 @@
-import Num from '../primitive/num/num.monad';
-import Monad from '../monad';
-import {timeToIsoString, totalNanoseconds} from '../../utils/temporal.utils';
 import moment from 'moment';
+import {Monad} from '@relate/types';
+
+import CypherNum from '../cypher-num/cypher-num.monad';
+import {timeToIsoString, totalNanoseconds} from '../../utils/temporal.utils';
 
 export interface RawLocalTime {
-    hour: Num;
-    minute: Num;
-    second: Num;
-    nanosecond: Num;
+    hour: CypherNum;
+    minute: CypherNum;
+    second: CypherNum;
+    nanosecond: CypherNum;
 }
 
+// @ts-ignore
 export default class LocalTime extends Monad<RawLocalTime> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -38,10 +40,10 @@ export default class LocalTime extends Monad<RawLocalTime> {
     static of(val: any): LocalTime {
         // @todo: improve typechecks
         const sane: RawLocalTime = {
-            hour: Num.fromValue(val.hour),
-            minute: Num.fromValue(val.minute),
-            second: Num.fromValue(val.second),
-            nanosecond: Num.fromValue(val.nanosecond),
+            hour: CypherNum.fromValue(val.hour),
+            minute: CypherNum.fromValue(val.minute),
+            second: CypherNum.fromValue(val.second),
+            nanosecond: CypherNum.fromValue(val.nanosecond),
         };
 
         return new LocalTime(sane);
@@ -60,7 +62,7 @@ export default class LocalTime extends Monad<RawLocalTime> {
      * @param {Integer|number|undefined} nanosecond - The optional amount of nanoseconds.
      * @return {LocalTime} New LocalTime.
      */
-    static fromStandardDate(standardDate: Date, nanosecond: Num): LocalTime {
+    static fromStandardDate(standardDate: Date, nanosecond: CypherNum): LocalTime {
         return LocalTime.of({
             hour: standardDate.getHours(),
             minute: standardDate.getMinutes(),
@@ -69,10 +71,10 @@ export default class LocalTime extends Monad<RawLocalTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.ZERO): LocalTime {
+    static fromMessage(seconds: CypherNum = CypherNum.ZERO): LocalTime {
         return seconds.divide(1000000000).flatMap((secs) => LocalTime.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
-            Num.ZERO // @todo: more
+            CypherNum.ZERO // @todo: more
         ));
     }
 

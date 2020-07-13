@@ -1,18 +1,16 @@
-import Monad from '../monad';
-import Num from '../primitive/num/num.monad';
-import None from '../primitive/none.monad';
-import Maybe from '../primitive/maybe.monad';
+import {Monad, None, Maybe, Str} from '@relate/types';
 
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {formatAsFloat} from '../../utils/spatial.utils';
-import Str from '../primitive/str.monad';
 
 export interface RawPoint {
-    srid: Num;
-    x: Num;
-    y: Num;
-    z: Maybe<Num>;
+    srid: CypherNum;
+    x: CypherNum;
+    y: CypherNum;
+    z: Maybe<CypherNum>;
 }
 
+// @ts-ignore
 export default class Point extends Monad<RawPoint> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -45,14 +43,14 @@ export default class Point extends Monad<RawPoint> {
     static of(val: any): Point {
         // @todo: improve typechecks
         const sane: RawPoint = {
-            srid: Num.fromValue(val.srid),
+            srid: CypherNum.fromValue(val.srid),
             // @todo: this could be a perf issue?
-            x: Num.fromValue(val.x),
-            y: Num.fromValue(val.y),
+            x: CypherNum.fromValue(val.x),
+            y: CypherNum.fromValue(val.y),
             z: Maybe.of(
                 val.z == null
                     ? None.of()
-                    : Num.fromValue(val.z)
+                    : CypherNum.fromValue(val.z)
             ),
         };
 

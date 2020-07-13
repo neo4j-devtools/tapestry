@@ -1,9 +1,8 @@
 import {map as _map} from 'lodash';
+import {Monad, List} from '@relate/types';
 
-import Monad from '../monad';
 import NodeMonad from './node.monad';
 import PathSegment from './path-segment.monad';
-import List from '../primitive/list.monad';
 import {arrayHasItems} from '../../utils/array.utils';
 
 export type RawPath = {
@@ -12,6 +11,7 @@ export type RawPath = {
     segments: List<PathSegment>
 };
 
+// @ts-ignore
 export default class Path extends Monad<RawPath> {
     get hasSegments() {
         return arrayHasItems(this.original.segments);

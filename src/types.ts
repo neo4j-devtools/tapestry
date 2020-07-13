@@ -1,3 +1,5 @@
+import {Bool, Str} from '@relate/types';
+
 import {
     DBMS_DB_STATUS,
     DBMS_DB_ROLE,
@@ -8,7 +10,6 @@ import {
 } from './driver';
 import {BOLT_PROTOCOLS} from './connection';
 import {BOLT_REQUEST_DATA_TYPE, BOLT_RESPONSE_DATA_TYPES} from './packstream';
-import {Bool, Str} from './monads';
 
 export type Packer<T extends any = any> = (protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: T) => number[];
 export type PackerInternal<T extends any = any> = (protocol: BOLT_PROTOCOLS, dataType: BOLT_REQUEST_DATA_TYPE, data: T, packer: PackerInternal<T>) => number[];

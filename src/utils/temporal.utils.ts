@@ -10,7 +10,7 @@ import {
     SECONDS_PER_HOUR,
     SECONDS_PER_MINUTE
 } from '../monads/temporal/temporal.constants';
-import {Num} from '../monads/index';
+import CypherNum from '../monads/cypher-num/cypher-num.monad';
 import LocalTime from '../monads/temporal/local-time.monad';
 import LocalDateTime from '../monads/temporal/local-date-time.monad';
 import DateMonad from '../monads/temporal/date.monad';
@@ -25,7 +25,7 @@ import DateMonad from '../monads/temporal/date.monad';
  */
 
 export function normalizeSecondsForDuration(seconds: number, nanoseconds: number) {
-    return Num.fromValue(seconds).add(floorDiv(nanoseconds, NANOS_PER_SECOND));
+    return CypherNum.fromValue(seconds).add(floorDiv(nanoseconds, NANOS_PER_SECOND));
 }
 
 export function normalizeNanosecondsForDuration(nanoseconds: number) {
@@ -40,11 +40,11 @@ export function normalizeNanosecondsForDuration(nanoseconds: number) {
  * @param {Integer|number|string} nanosecond the nanosecond of the local time to convert.
  * @return {Integer} nanoseconds representing the given local time.
  */
-export function localTimeToNanoOfDay(hour: Num | number | string, minute: Num | number | string, second: Num | number | string, nanosecond: Num | number | string) {
-    return Num.fromValue(hour).multiply(NANOS_PER_HOUR)
-        .add(Num.fromValue(minute).multiply(NANOS_PER_MINUTE))
-        .add(Num.fromValue(second).multiply(NANOS_PER_SECOND))
-        .add(Num.fromValue(nanosecond));
+export function localTimeToNanoOfDay(hour: CypherNum | number | string, minute: CypherNum | number | string, second: CypherNum | number | string, nanosecond: CypherNum | number | string) {
+    return CypherNum.fromValue(hour).multiply(NANOS_PER_HOUR)
+        .add(CypherNum.fromValue(minute).multiply(NANOS_PER_MINUTE))
+        .add(CypherNum.fromValue(second).multiply(NANOS_PER_SECOND))
+        .add(CypherNum.fromValue(nanosecond));
 }
 
 /**
@@ -52,9 +52,9 @@ export function localTimeToNanoOfDay(hour: Num | number | string, minute: Num | 
  * @param {Integer|number|string} nanoOfDay the nanoseconds of the day to convert.
  * @return {LocalTime} the local time representing given nanoseconds of the day.
  */
-export function nanoOfDayToLocalTime(nanoOfDay: Num | number | string): LocalTime {
+export function nanoOfDayToLocalTime(nanoOfDay: CypherNum | number | string): LocalTime {
     // @todo: perf of repeated operations?
-    const nanoOfDayToUse = Num.fromValue(nanoOfDay);
+    const nanoOfDayToUse = CypherNum.fromValue(nanoOfDay);
     const hour = nanoOfDayToUse.divide(NANOS_PER_HOUR);
     const minute = nanoOfDayToUse
         .subtract(hour.multiply(NANOS_PER_HOUR))
@@ -83,14 +83,14 @@ export function nanoOfDayToLocalTime(nanoOfDay: Num | number | string): LocalTim
  * @return {Integer} epoch second in UTC representing the given local date time.
  */
 export function localDateTimeToEpochSecond(
-    year: Num | number | string,
-    month: Num | number | string,
-    day: Num | number | string,
-    hour: Num | number | string,
-    minute: Num | number | string,
-    second: Num | number | string,
+    year: CypherNum | number | string,
+    month: CypherNum | number | string,
+    day: CypherNum | number | string,
+    hour: CypherNum | number | string,
+    minute: CypherNum | number | string,
+    second: CypherNum | number | string,
     // nanosecond: Num | number | string
-): Num {
+): CypherNum {
     const epochDay = dateToEpochDay(year, month, day);
     const localTimeSeconds = localTimeToSecondOfDay(hour, minute, second);
 
@@ -103,7 +103,7 @@ export function localDateTimeToEpochSecond(
  * @param {Integer|number|string} nano the nanosecond to use.
  * @return {LocalDateTime} the local date time representing given epoch second and nano.
  */
-export function epochSecondAndNanoToLocalDateTime(epochSecond: Num | number | string, nano: Num | number | string): LocalDateTime {
+export function epochSecondAndNanoToLocalDateTime(epochSecond: CypherNum | number | string, nano: CypherNum | number | string): LocalDateTime {
     const epochDay = floorDiv(epochSecond, SECONDS_PER_DAY);
     const secondsOfDay = floorMod(epochSecond, SECONDS_PER_DAY);
     const nanoOfDay = secondsOfDay.multiply(NANOS_PER_SECOND).add(nano);
@@ -128,10 +128,10 @@ export function epochSecondAndNanoToLocalDateTime(epochSecond: Num | number | st
  * @param {Integer|number|string} day the day of the local date to convert.
  * @return {Integer} epoch day representing the given date.
  */
-export function dateToEpochDay(year: Num | number | string, month: Num | number | string, day: Num | number | string) {
-    year = Num.fromValue(year);
-    month = Num.fromValue(month);
-    day = Num.fromValue(day);
+export function dateToEpochDay(year: CypherNum | number | string, month: CypherNum | number | string, day: CypherNum | number | string) {
+    year = CypherNum.fromValue(year);
+    month = CypherNum.fromValue(month);
+    day = CypherNum.fromValue(day);
 
     let epochDay = year.multiply(365);
 
@@ -175,11 +175,11 @@ export function dateToEpochDay(year: Num | number | string, month: Num | number 
  * @param {Integer|number|string} epochDay the epoch day to convert.
  * @return {DateMonad} the date representing the epoch day in years, months and days.
  */
-export function epochDayToDate(epochDay: Num | number | string): DateMonad {
-    epochDay = Num.fromValue(epochDay);
+export function epochDayToDate(epochDay: CypherNum | number | string): DateMonad {
+    epochDay = CypherNum.fromValue(epochDay);
 
     let zeroDay = epochDay.add(DAYS_0000_TO_1970).subtract(60);
-    let adjust = Num.fromValue(0);
+    let adjust = CypherNum.fromValue(0);
     if (zeroDay.lessThan(0)) {
         const adjustCycles = zeroDay
             .add(1)
@@ -242,7 +242,7 @@ export function epochDayToDate(epochDay: Num | number | string): DateMonad {
  * @param {Integer|number|string} nanoseconds the number of nanoseconds.
  * @return {string} ISO string that represents given duration.
  */
-export function durationToIsoString(months: Num | number | string, days: Num | number | string, seconds: Num | number | string, nanoseconds: Num | number | string): string {
+export function durationToIsoString(months: CypherNum | number | string, days: CypherNum | number | string, seconds: CypherNum | number | string, nanoseconds: CypherNum | number | string): string {
     const monthsString = formatNumber(months);
     const daysString = formatNumber(days);
     const secondsAndNanosecondsString = formatSecondsAndNanosecondsForDuration(
@@ -261,7 +261,7 @@ export function durationToIsoString(months: Num | number | string, days: Num | n
  * @param {Integer|number|string} nanosecond the nanosecond value.
  * @return {string} ISO string that represents given time.
  */
-export function timeToIsoString(hour: Num | number | string, minute: Num | number | string, second: Num | number | string, nanosecond: Num | number | string) {
+export function timeToIsoString(hour: CypherNum | number | string, minute: CypherNum | number | string, second: CypherNum | number | string, nanosecond: CypherNum | number | string) {
     const hourString = formatNumber(hour, 2);
     const minuteString = formatNumber(minute, 2);
     const secondString = formatNumber(second, 2);
@@ -275,8 +275,8 @@ export function timeToIsoString(hour: Num | number | string, minute: Num | numbe
  * @param {Integer|number|string} offsetSeconds the offset in seconds.
  * @return {string} ISO string that represents given offset.
  */
-export function timeZoneOffsetToIsoString(offsetSeconds: Num | number | string) {
-    offsetSeconds = Num.fromValue(offsetSeconds);
+export function timeZoneOffsetToIsoString(offsetSeconds: CypherNum | number | string) {
+    offsetSeconds = CypherNum.fromValue(offsetSeconds);
 
     if (offsetSeconds.equals(0)) {
         return 'Z';
@@ -311,8 +311,8 @@ export function timeZoneOffsetToIsoString(offsetSeconds: Num | number | string) 
  * @param {Integer|number|string} day the date day.
  * @return {string} ISO string that represents given date.
  */
-export function dateToIsoString(year: Num | number | string, month: Num | number | string, day: Num | number | string) {
-    year = Num.fromValue(year);
+export function dateToIsoString(year: CypherNum | number | string, month: CypherNum | number | string, day: CypherNum | number | string) {
+    year = CypherNum.fromValue(year);
     const isNegative = year.isNegative;
 
     if (isNegative) {
@@ -337,8 +337,8 @@ export function dateToIsoString(year: Num | number | string, month: Num | number
  * @param {Integer|number|undefined} nanoseconds the optional number of nanoseconds.
  * @return {Integer|number} the total amount of nanoseconds.
  */
-export function totalNanoseconds(standardDate: Date, nanoseconds: Num | number | string): Num {
-    return Num.fromValue(nanoseconds || 0)
+export function totalNanoseconds(standardDate: Date, nanoseconds: CypherNum | number | string): CypherNum {
+    return CypherNum.fromValue(nanoseconds || 0)
         .add(standardDate.getMilliseconds() * NANOS_PER_MILLISECOND);
 }
 
@@ -370,9 +370,9 @@ export function timeZoneOffsetInSeconds(standardDate: Date): number {
  * @param {Integer|number|string} second the second of the local time.
  * @return {Integer} seconds representing the given local time.
  */
-function localTimeToSecondOfDay(hour: Num | number | string, minute: Num | number | string, second: Num | number | string): Num {
-    return Num.fromValue(hour).multiply(SECONDS_PER_HOUR)
-        .add(Num.fromValue(minute).multiply(SECONDS_PER_MINUTE))
+function localTimeToSecondOfDay(hour: CypherNum | number | string, minute: CypherNum | number | string, second: CypherNum | number | string): CypherNum {
+    return CypherNum.fromValue(hour).multiply(SECONDS_PER_HOUR)
+        .add(CypherNum.fromValue(minute).multiply(SECONDS_PER_MINUTE))
         .add(second);
 }
 
@@ -381,8 +381,8 @@ function localTimeToSecondOfDay(hour: Num | number | string, minute: Num | numbe
  * @param {Integer|number|string} year the year to check. Will be converted to {@link Integer} for all calculations.
  * @return {boolean} `true` if given year is a leap year, `false` otherwise.
  */
-function isLeapYear(year: Num | number | string): boolean {
-    year = Num.fromValue(year);
+function isLeapYear(year: CypherNum | number | string): boolean {
+    year = CypherNum.fromValue(year);
 
     if (!year.modulo(4).equals(0)) {
         return false;
@@ -404,9 +404,9 @@ function isLeapYear(year: Num | number | string): boolean {
  * @param {Integer|number|string} y the divisor.
  * @return {Integer} the result.
  */
-function floorDiv(x: Num | number | string, y: Num | number | string): Num {
-    x = Num.fromValue(x);
-    y = Num.fromValue(y);
+function floorDiv(x: CypherNum | number | string, y: CypherNum | number | string): CypherNum {
+    x = CypherNum.fromValue(x);
+    y = CypherNum.fromValue(y);
 
     let result = x.divide(y);
 
@@ -422,9 +422,9 @@ function floorDiv(x: Num | number | string, y: Num | number | string): Num {
  * @param {Integer|number|string} y the divisor.
  * @return {Integer} the result.
  */
-function floorMod(x: Num | number | string, y: Num | number | string): Num {
-    x = Num.fromValue(x);
-    y = Num.fromValue(y);
+function floorMod(x: CypherNum | number | string, y: CypherNum | number | string): CypherNum {
+    x = CypherNum.fromValue(x);
+    y = CypherNum.fromValue(y);
 
     return x.subtract(floorDiv(x, y).multiply(y));
 }
@@ -434,9 +434,9 @@ function floorMod(x: Num | number | string, y: Num | number | string): Num {
  * @param {Integer|number|string} nanoseconds the number of nanoseconds to format.
  * @return {string} formatted value.
  */
-function formatSecondsAndNanosecondsForDuration(seconds: Num | number | string, nanoseconds: Num | number | string): string {
-    seconds = Num.fromValue(seconds);
-    nanoseconds = Num.fromValue(nanoseconds);
+function formatSecondsAndNanosecondsForDuration(seconds: CypherNum | number | string, nanoseconds: CypherNum | number | string): string {
+    seconds = CypherNum.fromValue(seconds);
+    nanoseconds = CypherNum.fromValue(nanoseconds);
 
     let secondsString;
     let nanosecondsString;
@@ -475,8 +475,8 @@ function formatSecondsAndNanosecondsForDuration(seconds: Num | number | string, 
  * @param {Integer|number|string} value the number of nanoseconds to format.
  * @return {string} formatted and possibly left-padded nanoseconds part as string.
  */
-function formatNanosecond(value: Num | number | string): string {
-    value = Num.fromValue(value);
+function formatNanosecond(value: CypherNum | number | string): string {
+    value = CypherNum.fromValue(value);
 
     return value.equals(0) ? '' : '.' + formatNumber(value, 9);
 }
@@ -486,8 +486,8 @@ function formatNanosecond(value: Num | number | string): string {
  * @param {number} [stringLength=undefined] the string length to left-pad to.
  * @return {string} formatted and possibly left-padded number as string.
  */
-function formatNumber(num: Num | number | string, stringLength?: number) {
-    num = Num.fromValue(num);
+function formatNumber(num: CypherNum | number | string, stringLength?: number) {
+    num = CypherNum.fromValue(num);
     const isNegative = num.isNegative;
     if (isNegative) {
         num = num.negate();
@@ -504,13 +504,13 @@ function formatNumber(num: Num | number | string, stringLength?: number) {
 }
 
 export function localDateTimeToString(
-    year: Num,
-    month: Num,
-    day: Num,
-    hour: Num,
-    minute: Num,
-    second: Num,
-    nanosecond: Num
+    year: CypherNum,
+    month: CypherNum,
+    day: CypherNum,
+    hour: CypherNum,
+    minute: CypherNum,
+    second: CypherNum,
+    nanosecond: CypherNum
 ): string {
     return (
         dateToIsoString(year, month, day) +

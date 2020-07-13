@@ -1,7 +1,7 @@
 import moment from 'moment';
+import {Monad} from '@relate/types';
 
-import Num from '../primitive/num/num.monad';
-import Monad from '../monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {
     timeToIsoString,
     timeZoneOffsetInSeconds,
@@ -10,13 +10,14 @@ import {
 } from '../../utils/temporal.utils';
 
 export interface RawTime {
-    hour: Num;
-    minute: Num;
-    second: Num;
-    nanosecond: Num;
-    timeZoneOffsetSeconds: Num;
+    hour: CypherNum;
+    minute: CypherNum;
+    second: CypherNum;
+    nanosecond: CypherNum;
+    timeZoneOffsetSeconds: CypherNum;
 }
 
+// @ts-ignore
 export default class TimeMonad extends Monad<RawTime> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -49,11 +50,11 @@ export default class TimeMonad extends Monad<RawTime> {
     static of(val: any): TimeMonad {
         // @todo: improve typechecks
         const sane: RawTime = {
-            hour: Num.fromValue(val.hour),
-            minute: Num.fromValue(val.minute),
-            second: Num.fromValue(val.second),
-            nanosecond: Num.fromValue(val.nanosecond),
-            timeZoneOffsetSeconds: Num.fromValue(val.timeZoneOffsetSeconds),
+            hour: CypherNum.fromValue(val.hour),
+            minute: CypherNum.fromValue(val.minute),
+            second: CypherNum.fromValue(val.second),
+            nanosecond: CypherNum.fromValue(val.nanosecond),
+            timeZoneOffsetSeconds: CypherNum.fromValue(val.timeZoneOffsetSeconds),
         };
 
         return new TimeMonad(sane);
@@ -65,7 +66,7 @@ export default class TimeMonad extends Monad<RawTime> {
             : TimeMonad.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: Num): TimeMonad {
+    static fromStandardDate(standardDate: Date, nanosecond: CypherNum): TimeMonad {
         return TimeMonad.of({
             hour: standardDate.getHours(),
             minute: standardDate.getMinutes(),
@@ -75,10 +76,10 @@ export default class TimeMonad extends Monad<RawTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.ZERO): TimeMonad {
+    static fromMessage(seconds: CypherNum = CypherNum.ZERO): TimeMonad {
         return seconds.divide(1000000000).flatMap((secs) => TimeMonad.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
-            Num.ZERO // @todo: more
+            CypherNum.ZERO // @todo: more
         ));
     }
 

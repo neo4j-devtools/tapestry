@@ -1,20 +1,20 @@
-import Num from '../primitive/num/num.monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {boundMethod} from 'autobind-decorator';
 
 export class ValueRange {
-    protected readonly minNum: Num;
-    protected readonly maxNum: Num;
+    protected readonly minNum: CypherNum;
+    protected readonly maxNum: CypherNum;
 
     constructor(protected readonly min: number, protected readonly max: number) {
-        this.minNum = Num.of(min);
-        this.maxNum = Num.of(max);
+        this.minNum = CypherNum.of(min);
+        this.maxNum = CypherNum.of(max);
     }
 
     @boundMethod
-    contains(value: number | Num) {
-        const valToUse = Num.isNum(value)
+    contains(value: number | CypherNum) {
+        const valToUse = CypherNum.isCypherNum(value)
             ? value
-            : Num.fromValue(value);
+            : CypherNum.fromValue(value);
 
         return (
             valToUse.greaterThanOrEqual(this.minNum) &&

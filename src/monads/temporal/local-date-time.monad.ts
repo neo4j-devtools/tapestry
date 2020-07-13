@@ -1,19 +1,20 @@
 import moment from 'moment';
+import {Monad} from '@relate/types';
 
-import Num from '../primitive/num/num.monad';
-import Monad from '../monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {localDateTimeToString, totalNanoseconds} from '../../utils/temporal.utils';
 
 export interface RawLocalDateTime {
-    year: Num;
-    month: Num;
-    day: Num;
-    hour: Num;
-    minute: Num;
-    second: Num;
-    nanosecond: Num;
+    year: CypherNum;
+    month: CypherNum;
+    day: CypherNum;
+    hour: CypherNum;
+    minute: CypherNum;
+    second: CypherNum;
+    nanosecond: CypherNum;
 }
 
+// @ts-ignore
 export default class LocalDateTime extends Monad<RawLocalDateTime> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -54,13 +55,13 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
     static of(val: any): LocalDateTime {
         // @todo: improve typechecks
         const sane: RawLocalDateTime = {
-            year: Num.fromValue(val.year),
-            month: Num.fromValue(val.month),
-            day: Num.fromValue(val.day),
-            hour: Num.fromValue(val.hour),
-            minute: Num.fromValue(val.minute),
-            second: Num.fromValue(val.second),
-            nanosecond: Num.fromValue(val.nanosecond)
+            year: CypherNum.fromValue(val.year),
+            month: CypherNum.fromValue(val.month),
+            day: CypherNum.fromValue(val.day),
+            hour: CypherNum.fromValue(val.hour),
+            minute: CypherNum.fromValue(val.minute),
+            second: CypherNum.fromValue(val.second),
+            nanosecond: CypherNum.fromValue(val.nanosecond)
         };
 
         return new LocalDateTime(sane);
@@ -72,7 +73,7 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
             : LocalDateTime.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: Num): LocalDateTime {
+    static fromStandardDate(standardDate: Date, nanosecond: CypherNum): LocalDateTime {
         return LocalDateTime.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -84,7 +85,7 @@ export default class LocalDateTime extends Monad<RawLocalDateTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.ZERO, nanoseconds: Num = Num.ZERO): LocalDateTime {
+    static fromMessage(seconds: CypherNum = CypherNum.ZERO, nanoseconds: CypherNum = CypherNum.ZERO): LocalDateTime {
         return seconds.flatMap((secs) => LocalDateTime.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
             nanoseconds

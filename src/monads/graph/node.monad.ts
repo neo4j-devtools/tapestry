@@ -1,17 +1,16 @@
-import Monad from '../monad';
-import Num from '../primitive/num/num.monad';
+import {Monad, Str, Dict, List}from '@relate/types';
+
 import {arrayHasItems} from '../../utils/array.utils';
-import Str from '../primitive/str.monad';
-import Dict from '../primitive/dict.monad';
-import List from '../primitive/list.monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 
 export interface RawNode {
-    identity: Num;
+    identity: CypherNum;
     labels: List<Str>;
     // @todo: typings
     properties: Dict;
 }
 
+// @ts-ignore
 export default class NodeMonad extends Monad<RawNode> {
     static EMPTY = NodeMonad.of({});
 
@@ -46,7 +45,7 @@ export default class NodeMonad extends Monad<RawNode> {
     static of(val: any): NodeMonad {
         // @todo: improve typechecks?
         const sane: RawNode = {
-            identity: Num.fromValue(val.identity),
+            identity: CypherNum.fromValue(val.identity),
             labels: List.from(val.labels),
             properties: Dict.from(val.properties)
         };

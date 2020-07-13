@@ -1,72 +1,73 @@
 import {assign} from 'lodash';
+import {Bool, Monad, Nil, None, Str} from '@relate/types';
 
 import {UnpackerReturn} from '../../types';
 
 import {NUMBER_TYPES} from './unpacker.constants';
-import {Bool, Monad, Nil, None, Num, Str} from '../../monads';
+import {CypherNum} from '../../monads';
 
-export function unpackNumber(view: DataView, numberType: NUMBER_TYPES, pos: number): UnpackerReturn<Num> {
+export function unpackNumber(view: DataView, numberType: NUMBER_TYPES, pos: number): UnpackerReturn<CypherNum> {
     switch (numberType) {
         case NUMBER_TYPES.INT8: {
             return {
                 finalPos: pos + 1,
-                data: Num.of(view.getInt8(pos + 1))
+                data: CypherNum.of(view.getInt8(pos + 1))
             };
         }
 
         case NUMBER_TYPES.INT16: {
             return {
                 finalPos: pos + 2,
-                data: Num.of(view.getInt16(pos, false))
+                data: CypherNum.of(view.getInt16(pos, false))
             };
         }
 
         case NUMBER_TYPES.INT32: {
             return {
                 finalPos: pos + 4,
-                data: Num.of(view.getInt32(pos, false))
+                data: CypherNum.of(view.getInt32(pos, false))
             };
         }
 
         case NUMBER_TYPES.UINT8: {
             return {
                 finalPos: pos + 1,
-                data: Num.of(readUint8(view, pos))
+                data: CypherNum.of(readUint8(view, pos))
             };
         }
 
         case NUMBER_TYPES.UINT16: {
             return {
                 finalPos: pos + 2,
-                data: Num.of(readUint16(view, pos))
+                data: CypherNum.of(readUint16(view, pos))
             };
         }
 
         case NUMBER_TYPES.UINT32: {
             return {
                 finalPos: pos + 4,
-                data: Num.of(readUint16(view, pos))
+                data: CypherNum.of(readUint16(view, pos))
             };
         }
 
         case NUMBER_TYPES.INT64: {
             return {
                 finalPos: pos + 8,
-                data: Num.of(readInt64(view, pos))
+                data: CypherNum.of(readInt64(view, pos))
             };
         }
 
         case NUMBER_TYPES.FLOAT64: {
             return {
                 finalPos: pos + 8,
-                data: Num.of(view.getFloat64(pos, false))
+                data: CypherNum.of(view.getFloat64(pos, false))
             };
         }
 
         default: {
             return {
                 finalPos: pos + 1,
-                data: Num.of(view.getUint8(pos))
+                data: CypherNum.of(view.getUint8(pos))
             };
         }
     }

@@ -1,15 +1,16 @@
 import moment from 'moment';
+import {Monad} from '@relate/types';
 
-import Num from '../primitive/num/num.monad';
-import Monad from '../monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {dateToIsoString} from '../../utils/temporal.utils';
 
 export interface RawDate {
-    year: Num;
-    month: Num;
-    day: Num;
+    year: CypherNum;
+    month: CypherNum;
+    day: CypherNum;
 }
 
+// @ts-ignore
 export default class DateMonad extends Monad<RawDate> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -34,9 +35,9 @@ export default class DateMonad extends Monad<RawDate> {
     static of(val: any): DateMonad {
         // @todo: improve typechecks
         const sane: RawDate = {
-            year: Num.fromValue(val.year),
-            month: Num.fromValue(val.month),
-            day: Num.fromValue(val.day),
+            year: CypherNum.fromValue(val.year),
+            month: CypherNum.fromValue(val.month),
+            day: CypherNum.fromValue(val.day),
         };
 
         return new DateMonad(sane);
@@ -56,7 +57,7 @@ export default class DateMonad extends Monad<RawDate> {
         });
     }
 
-    static fromMessage(days: Num = Num.ZERO): DateMonad {
+    static fromMessage(days: CypherNum = CypherNum.ZERO): DateMonad {
         return days.flatMap((no) => DateMonad.fromStandardDate(moment(0).add(no, 'days').toDate()));
     }
 

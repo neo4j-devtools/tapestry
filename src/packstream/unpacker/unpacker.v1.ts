@@ -1,18 +1,20 @@
-import {UnpackerInternal, UnpackerReturn} from '../../types';
+import {
+    Dict,
+    List,
+    Maybe,
+    Monad,
+    None,
+} from '@relate/types';
 
+import {UnpackerInternal, UnpackerReturn} from '../../types';
 import {
     DateMonad,
     DateTime,
-    Dict,
     Duration,
-    List,
     LocalDateTime,
     LocalTime,
-    Maybe,
-    Monad,
     NodeMonad,
-    None,
-    Num,
+    CypherNum,
     Path,
     PathSegment,
     Point,
@@ -62,7 +64,7 @@ export function unpackerV1(_: BOLT_PROTOCOLS, dataType: BOLT_RESPONSE_DATA_TYPES
         case BOLT_RESPONSE_DATA_TYPES.MAP: {
             const {finalPos, data} = unpackMap(view, size, pos, unpacker);
 
-            return {finalPos, data: Dict.fromObject(data)};
+            return {finalPos, data: Dict.from(data)};
         }
 
         case BOLT_RESPONSE_DATA_TYPES.STRUCT: {
@@ -226,7 +228,7 @@ export function unpackV1Message(view: DataView, pos: number = 0, unpacker: Unpac
     }
 
     // @todo: wat is dis
-    return {finalPos, data: Num.of(message - 0x100)};
+    return {finalPos, data: CypherNum.of(message - 0x100)};
 }
 
 function unpackList(view: DataView, size: number, pos: number, unpacker: UnpackerInternal): UnpackerReturn<any[]> {
@@ -283,9 +285,9 @@ function unpackStructure(view: DataView, size: number, pos: number, unpacker: Un
     return {finalPos: currPos, data: fields};
 }
 
-function tryGetStructMonad(struct: List): Monad<any> {
+function tryGetStructMonad(struct: List<any>): Monad<any> {
     // @todo: could be optimised
-    const firstBytes = struct.first.getOrElse(Num.ZERO);
+    const firstBytes = struct.first.getOrElse(CypherNum.ZERO);
     const rest: List<any> = struct.slice(1);
 
     switch (firstBytes.getOrElse(0)) {
@@ -341,9 +343,9 @@ function tryGetStructMonad(struct: List): Monad<any> {
     }
 }
 
-type PathParam = [List<NodeMonad>, List<UnboundRelationship>, List<Num>];
+type PathParam = [List<NodeMonad>, List<UnboundRelationship>, List<CypherNum>];
 
-function mapListToPath(list: List): Path {
+function mapListToPath(list: List<any>): Path {
     // @todo: typings and no destructuring
     let [nodes, relations, sequence] = <PathParam>[...list];
     const noSequences = sequence.length.getOrElse(0);
@@ -352,10 +354,10 @@ function mapListToPath(list: List): Path {
     let last: NodeMonad = start;
 
     for (let index = 0; index < noSequences; index += 2) {
-        const relIndex = sequence.getIndex(index).get();
-        const end = sequence.getIndex(2 * index + 1).flatMap((val) => None.isNone(val)
+        const relIndex = sequence.nth(index).get();
+        const end = sequence.nth(2 * index + 1).flatMap((val) => None.isNone(val)
             ? Maybe.of(NodeMonad.EMPTY)
-            : nodes.getIndex(val)
+            : nodes.nth(val.get())
         ).get();
 
         // @todo: so many questions...
@@ -365,8 +367,8 @@ function mapListToPath(list: List): Path {
 
         // @todo: so many questions...
         const rel = relIndex.greaterThan(0)
-            ? relations.getIndex(relIndex.subtract(1)).getOrElse(UnboundRelationship.EMPTY)
-            : relations.getIndex(relIndex.add(relations.length)).getOrElse(UnboundRelationship.EMPTY);
+            ? relations.nth(relIndex.subtract(1).get()).getOrElse(UnboundRelationship.EMPTY)
+            : relations.nth(relIndex.add(relations.length.get()).get()).getOrElse(UnboundRelationship.EMPTY);
 
         segments.push(PathSegment.of({
             start,

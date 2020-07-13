@@ -1,15 +1,15 @@
-import Num from '../primitive/num/num.monad';
-import Monad from '../monad';
+import {Monad, Str, Dict} from '@relate/types';
+
 import Relationship from './relationship.monad';
-import Str from '../primitive/str.monad';
-import Dict from '../primitive/dict.monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 
 export interface RawUnboundRelationship {
-    identity: Num;
+    identity: CypherNum;
     type: Str;
     properties: Dict;
 }
 
+// @ts-ignore
 export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     static EMPTY = UnboundRelationship.of({});
 
@@ -40,7 +40,7 @@ export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     static of(val: any): UnboundRelationship {
         // @todo: improve typechecks
         const sane: RawUnboundRelationship = {
-            identity: Num.fromValue(val.identity),
+            identity: CypherNum.fromValue(val.identity),
             type: Str.from(val.type),
             properties: Dict.from(val.properties)
         };
@@ -54,7 +54,7 @@ export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
             : UnboundRelationship.of(val);
     }
 
-    bind(start: Num, end: Num) {
+    bind(start: CypherNum, end: CypherNum) {
         return Relationship.of({
             ...this.original,
             start,

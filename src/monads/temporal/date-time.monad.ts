@@ -1,10 +1,7 @@
 import moment from 'moment';
+import {Monad, Str, None, Maybe} from '@relate/types';
 
-import Num from '../primitive/num/num.monad';
-import Monad from '../monad';
-import Str from '../primitive/str.monad';
-import None from '../primitive/none.monad';
-import Maybe from '../primitive/maybe.monad';
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {
     localDateTimeToString,
     timeZoneOffsetInSeconds,
@@ -13,17 +10,18 @@ import {
 } from '../../utils/temporal.utils';
 
 export interface RawDateTime {
-    year: Num;
-    month: Num;
-    day: Num;
-    hour: Num;
-    minute: Num;
-    second: Num;
-    nanosecond: Num;
-    timeZoneOffsetSeconds: Maybe<Num>;
+    year: CypherNum;
+    month: CypherNum;
+    day: CypherNum;
+    hour: CypherNum;
+    minute: CypherNum;
+    second: CypherNum;
+    nanosecond: CypherNum;
+    timeZoneOffsetSeconds: Maybe<CypherNum>;
     timeZoneId: Maybe<Str>;
 }
 
+// @ts-ignore
 export default class DateTime extends Monad<RawDateTime> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -72,17 +70,17 @@ export default class DateTime extends Monad<RawDateTime> {
     static of(val: any): DateTime {
         // @todo: improve typechecks
         const sane: RawDateTime = {
-            year: Num.fromValue(val.year),
-            month: Num.fromValue(val.month),
-            day: Num.fromValue(val.day),
-            hour: Num.fromValue(val.hour),
-            minute: Num.fromValue(val.minute),
-            second: Num.fromValue(val.second),
-            nanosecond: Num.fromValue(val.nanosecond),
+            year: CypherNum.fromValue(val.year),
+            month: CypherNum.fromValue(val.month),
+            day: CypherNum.fromValue(val.day),
+            hour: CypherNum.fromValue(val.hour),
+            minute: CypherNum.fromValue(val.minute),
+            second: CypherNum.fromValue(val.second),
+            nanosecond: CypherNum.fromValue(val.nanosecond),
             timeZoneOffsetSeconds: Maybe.of(
                 val.timeZoneOffsetSeconds == null
                     ? None.EMPTY
-                    : Num.fromValue(val.timeZoneOffsetSeconds)
+                    : CypherNum.fromValue(val.timeZoneOffsetSeconds)
             ),
             timeZoneId: Maybe.of(
                 val.timeZoneId
@@ -100,7 +98,7 @@ export default class DateTime extends Monad<RawDateTime> {
             : DateTime.of(val);
     }
 
-    static fromStandardDate(standardDate: Date, nanosecond: Num, timeZoneId?: Str): DateTime {
+    static fromStandardDate(standardDate: Date, nanosecond: CypherNum, timeZoneId?: Str): DateTime {
         return DateTime.of({
             year: standardDate.getFullYear(),
             month: standardDate.getMonth() + 1,
@@ -118,11 +116,11 @@ export default class DateTime extends Monad<RawDateTime> {
         });
     }
 
-    static fromMessage(seconds: Num = Num.ZERO, nanoseconds: Num = Num.ZERO): DateTime {
+    static fromMessage(seconds: CypherNum = CypherNum.ZERO, nanoseconds: CypherNum = CypherNum.ZERO): DateTime {
         return seconds.flatMap((secs) => DateTime.fromStandardDate(
             moment(0).add(secs, 'seconds').toDate(),
-            nanoseconds,
-            None.EMPTY // @todo: more
+            nanoseconds
+            // @todo: timezone id?
         ));
     }
 
@@ -137,7 +135,7 @@ export default class DateTime extends Monad<RawDateTime> {
             this.nanosecond
         );
         const zoneId = this.timeZoneId.getOrElse(Str.EMPTY);
-        const timeZoneOffsetSeconds = this.timeZoneOffsetSeconds.getOrElse(Num.ZERO);
+        const timeZoneOffsetSeconds = this.timeZoneOffsetSeconds.getOrElse(CypherNum.ZERO);
         const timeZoneStr = !zoneId.isEmpty
             ? zoneId.map((zone) => `[${zone}]`).get()
             : timeZoneOffsetToIsoString(timeZoneOffsetSeconds.get());

@@ -1,7 +1,5 @@
 import {entries} from 'lodash';
-
-import Monad from '../monad';
-import Dict from '../primitive/dict.monad';
+import {Monad, Dict} from '@relate/types';
 
 export type RawErrorMonad<T = Monad<any>> = Map<'code' | 'message', T>
 

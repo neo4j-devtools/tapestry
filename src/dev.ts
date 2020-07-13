@@ -1,28 +1,25 @@
-import {Driver, DRIVER_RESULT_TYPE} from '.';
-import {List, Result} from './monads';
-import {filter, reduce} from 'rxjs/operators';
+import {reduce} from 'rxjs/operators';
 
-const driver = new Driver<Result>({
+import {Driver, DRIVER_HEADERS, JsonUnpacker} from '.';
+
+const driver = new Driver<any>({
     connectionConfig: {
-        authToken: {
-            scheme: 'basic',
-            principal: 'neo4j',
-            credentials: 'dsadsa',
-        },
+        unpacker: JsonUnpacker,
+        getResponseHeader: (data): DRIVER_HEADERS => data[0] || DRIVER_HEADERS.FAILURE,
+        getResponseData: (data): any => data[1] || []
     },
+    mapToResult: (headerRecord, type, data) => ({header: headerRecord, type, data})
 });
 
-// Promise
-getResults()
-    .then(console.log)
-    .catch(console.error)
-    .finally(() => driver.shutDown().toPromise());
+driver.query('MATCH (n) RETURN n LIMIT 1', {}, {db: 'system'})
+    .pipe(
+        reduce((agg, next) => agg.concat(next), [])
+    ).subscribe({
+    next: console.log,
+    complete: () => driver.shutDown().toPromise(),
+    error: (err) => {
+        console.error(err);
 
-async function getResults() {
-    const q1 = await driver.query('RETURN "foo" as bar').pipe(
-        filter(({type}) => type === DRIVER_RESULT_TYPE.RECORD),
-        reduce((agg, next) => agg.concat(next), List.of<Result>([])),
-    ).toPromise();
-
-    return `${q1}`;
-}
+        driver.shutDown().toPromise();
+    }
+})

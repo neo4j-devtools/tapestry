@@ -1,14 +1,16 @@
-import Monad from '../monad';
-import Num from '../primitive/num/num.monad';
+import {Monad} from '@relate/types';
+
+import CypherNum from '../cypher-num/cypher-num.monad';
 import {durationToIsoString} from '../../utils/temporal.utils';
 
 export interface RawDuration {
-    months: Num;
-    days: Num;
-    seconds: Num;
-    nanoseconds: Num;
+    months: CypherNum;
+    days: CypherNum;
+    seconds: CypherNum;
+    nanoseconds: CypherNum;
 }
 
+// @ts-ignore
 export default class Duration extends Monad<RawDuration> {
     get isEmpty(): boolean {
         return false; // @todo
@@ -37,10 +39,10 @@ export default class Duration extends Monad<RawDuration> {
     static of(val: any): Duration {
         // @todo: improve typechecks
         const sane: RawDuration = {
-            months: Num.fromValue(val.months),
-            days: Num.fromValue(val.days),
-            seconds: Num.fromValue(val.seconds),
-            nanoseconds: Num.fromValue(val.nanoseconds),
+            months: CypherNum.fromValue(val.months),
+            days: CypherNum.fromValue(val.days),
+            seconds: CypherNum.fromValue(val.seconds),
+            nanoseconds: CypherNum.fromValue(val.nanoseconds),
         };
 
         return new Duration(sane);

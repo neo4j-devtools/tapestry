@@ -1,5 +1,7 @@
+import {List} from '@relate/types';
+
 import {IConnectionConfig, IDriverConfig} from '../types';
-import {List, Num, Result} from '../monads';
+import {CypherNum, Result} from '../monads';
 
 export enum DRIVER_RESULT_TYPE {
     RECORD = 'RECORD',
@@ -16,8 +18,8 @@ export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
     host: 'localhost',
     port: 7687,
     userAgent: `tapestry/${'1.0.0'}`,
-    getResponseHeader(unpacked: List<Num>) {
-        const header = unpacked.first.getOrElse(Num.of(DRIVER_HEADERS.FAILURE));
+    getResponseHeader(unpacked: List<CypherNum>) {
+        const header = unpacked.first.getOrElse(CypherNum.of(DRIVER_HEADERS.FAILURE));
 
         switch (header.get()) {
             case DRIVER_HEADERS.SUCCESS:
@@ -31,8 +33,8 @@ export const DEFAULT_CONNECTION_CONFIG: IConnectionConfig<any> = {
                 return DRIVER_HEADERS.FAILURE;
         }
     },
-    getResponseData(unpacked: List<List>): List {
-        return unpacked.getIndex(1).getOrElse(List.of([]));
+    getResponseData(unpacked: List<List<any>>): List<any> {
+        return unpacked.nth(1).getOrElse(List.of([]));
     }
 };
 

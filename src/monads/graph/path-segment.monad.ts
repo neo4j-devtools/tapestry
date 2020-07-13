@@ -1,4 +1,4 @@
-import Monad from '../monad';
+import {Monad} from '@relate/types';
 import NodeMonad from './node.monad';
 import Relationship from './relationship.monad';
 
@@ -8,6 +8,7 @@ export type RawPathSegment = {
     end: NodeMonad
 }
 
+// @ts-ignore
 export default class PathSegment extends Monad<RawPathSegment> {
     get start() {
         return this.original.start;

@@ -1,6 +1,7 @@
-import Monad from '../monad';
+import {Monad, Dict, List, Maybe, Str} from '@relate/types';
+
 import {DRIVER_RESULT_TYPE} from '../../driver';
-import {Dict, List, Maybe, Num, Str} from '../index';
+import CypherNum from '../cypher-num/cypher-num.monad';
 
 export type RawResult<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>> = {
     header: Dict<Header>,
@@ -8,6 +9,7 @@ export type RawResult<Data extends Monad<any> = Monad<any>, Header extends Monad
     data: List<Data>,
 };
 
+// @ts-ignore
 export default class Result<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>> extends Monad<RawResult<Data, Header>> {
     get header(): Dict<Header> {
         return this.original.header;
@@ -32,9 +34,9 @@ export default class Result<Data extends Monad<any> = Monad<any>, Header extends
     getFieldData(field: Str | string): Maybe<Data> {
         const key = Str.from(field);
 
-        return this.fields.indexOf(key).switchMap((val) => val.lessThan(Num.ZERO)
+        return this.fields.indexOf(key).switchMap((val) => val.lessThan(CypherNum.ZERO.get())
             ? Maybe.of<Data>()
-            : this.data.getIndex(val)
+            : this.data.nth(val)
         );
     }
 
