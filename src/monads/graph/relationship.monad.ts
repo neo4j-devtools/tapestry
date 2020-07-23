@@ -10,7 +10,6 @@ export interface RawRelationship {
     properties: Dict;
 }
 
-// @ts-ignore
 export default class Relationship extends Monad<RawRelationship> {
     static EMPTY = Relationship.of({});
 

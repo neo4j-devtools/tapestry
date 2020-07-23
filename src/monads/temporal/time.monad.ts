@@ -17,7 +17,6 @@ export interface RawTime {
     timeZoneOffsetSeconds: CypherNum;
 }
 
-// @ts-ignore
 export default class TimeMonad extends Monad<RawTime> {
     get isEmpty(): boolean {
         return false; // @todo

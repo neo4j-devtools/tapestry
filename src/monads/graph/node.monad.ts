@@ -10,7 +10,6 @@ export interface RawNode {
     properties: Dict;
 }
 
-// @ts-ignore
 export default class NodeMonad extends Monad<RawNode> {
     static EMPTY = NodeMonad.of({});
 

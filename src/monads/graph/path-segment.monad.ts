@@ -8,7 +8,6 @@ export type RawPathSegment = {
     end: NodeMonad
 }
 
-// @ts-ignore
 export default class PathSegment extends Monad<RawPathSegment> {
     get start() {
         return this.original.start;

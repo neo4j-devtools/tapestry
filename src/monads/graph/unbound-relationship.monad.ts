@@ -9,7 +9,6 @@ export interface RawUnboundRelationship {
     properties: Dict;
 }
 
-// @ts-ignore
 export default class UnboundRelationship extends Monad<RawUnboundRelationship> {
     static EMPTY = UnboundRelationship.of({});
 

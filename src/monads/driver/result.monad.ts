@@ -9,7 +9,6 @@ export type RawResult<Data extends Monad<any> = Monad<any>, Header extends Monad
     data: List<Data>,
 };
 
-// @ts-ignore
 export default class Result<Data extends Monad<any> = Monad<any>, Header extends Monad<any> = Monad<any>> extends Monad<RawResult<Data, Header>> {
     get header(): Dict<Header> {
         return this.original.header;

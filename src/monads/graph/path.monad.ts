@@ -11,7 +11,6 @@ export type RawPath = {
     segments: List<PathSegment>
 };
 
-// @ts-ignore
 export default class Path extends Monad<RawPath> {
     get hasSegments() {
         return arrayHasItems(this.original.segments);

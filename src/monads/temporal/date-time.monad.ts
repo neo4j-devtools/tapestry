@@ -21,7 +21,6 @@ export interface RawDateTime {
     timeZoneId: Maybe<Str>;
 }
 
-// @ts-ignore
 export default class DateTime extends Monad<RawDateTime> {
     get isEmpty(): boolean {
         return false; // @todo

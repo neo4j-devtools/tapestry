@@ -14,7 +14,6 @@ export interface RawLocalDateTime {
     nanosecond: CypherNum;
 }
 
-// @ts-ignore
 export default class LocalDateTime extends Monad<RawLocalDateTime> {
     get isEmpty(): boolean {
         return false; // @todo

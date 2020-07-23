@@ -10,7 +10,6 @@ export interface RawDuration {
     nanoseconds: CypherNum;
 }
 
-// @ts-ignore
 export default class Duration extends Monad<RawDuration> {
     get isEmpty(): boolean {
         return false; // @todo

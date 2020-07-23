@@ -10,7 +10,6 @@ export interface RawPoint {
     z: Maybe<CypherNum>;
 }
 
-// @ts-ignore
 export default class Point extends Monad<RawPoint> {
     get isEmpty(): boolean {
         return false; // @todo

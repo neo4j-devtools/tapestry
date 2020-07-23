@@ -10,7 +10,6 @@ export interface RawDate {
     day: CypherNum;
 }
 
-// @ts-ignore
 export default class DateMonad extends Monad<RawDate> {
     get isEmpty(): boolean {
         return false; // @todo
