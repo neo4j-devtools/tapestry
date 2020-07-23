@@ -9,4 +9,5 @@ if (!has(global, 'WebSocket')) {
 export * from './driver';
 export * from './connection';
 export * from './types';
+export * from './monads';
 export * from './packstream';
